@@ -12,7 +12,7 @@
 const express = require('express');
 const router = express.Router();
 
-// GET /api/vendors - Liste tous les vendeurs
+// GET /api/sellers - Liste tous les vendeurs
 router.get('/', async (req, res) => {
     try {
         // TODO: Filtres : verified, active, etc.
@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
         // TODO: Récupérer la liste des vendeurs avec infos user
 
         res.status(200).json({
-            vendors: [],
+            sellers: [],
             pagination: {
                 page: 1,
                 limit: 10,
@@ -32,7 +32,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// GET /api/vendors/:id - Détails d'un vendeur spécifique
+// GET /api/sellers/:id - Détails d'un vendeur spécifique
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -41,7 +41,7 @@ router.get('/:id', async (req, res) => {
         // TODO: Inclure infos user, statistiques publiques
 
         res.status(200).json({
-            vendor: {
+            seller: {
                 id,
                 user_id: 'user_uuid',
                 nom_boutique: 'Ma Boutique',
@@ -57,7 +57,7 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// POST /api/vendors - Créer un profil vendeur (nécessite rôle VENDEUR)
+// POST /api/sellers - Créer un profil vendeur (nécessite rôle VENDEUR)
 router.post('/', async (req, res) => {
     try {
         const { user_id, nom_boutique, description, siret } = req.body;
@@ -69,14 +69,14 @@ router.post('/', async (req, res) => {
 
         res.status(201).json({
             message: 'Profil vendeur créé, en attente de vérification',
-            vendor: { id: 'new_vendor_id' }
+            seller: { id: 'new_seller_id' }
         });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
 });
 
-// PUT /api/vendors/:id - Mise à jour du profil vendeur
+// PUT /api/sellers/:id - Mise à jour du profil vendeur
 router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -88,14 +88,14 @@ router.put('/:id', async (req, res) => {
 
         res.status(200).json({
             message: 'Profil vendeur mis à jour',
-            vendor: { id, nom_boutique, description }
+            seller: { id, nom_boutique, description }
         });
     } catch (error) {
         res.status(403).json({ error: 'Action non autorisée' });
     }
 });
 
-// PATCH /api/vendors/:id/verify - Vérifier un vendeur (ADMIN uniquement)
+// PATCH /api/sellers/:id/verify - Vérifier un vendeur (ADMIN uniquement)
 router.patch('/:id/verify', async (req, res) => {
     try {
         const { id } = req.params;
@@ -106,14 +106,14 @@ router.patch('/:id/verify', async (req, res) => {
 
         res.status(200).json({
             message: 'Vendeur vérifié avec succès',
-            vendor: { id, is_verified: true }
+            seller: { id, is_verified: true }
         });
     } catch (error) {
         res.status(403).json({ error: 'Action non autorisée' });
     }
 });
 
-// PATCH /api/vendors/:id/commission - Modifier la commission d'un vendeur (ADMIN)
+// PATCH /api/sellers/:id/commission - Modifier la commission d'un vendeur (ADMIN)
 router.patch('/:id/commission', async (req, res) => {
     try {
         const { id } = req.params;
@@ -125,14 +125,14 @@ router.patch('/:id/commission', async (req, res) => {
 
         res.status(200).json({
             message: 'Commission mise à jour',
-            vendor: { id, commission_pourcent }
+            seller: { id, commission_pourcent }
         });
     } catch (error) {
         res.status(403).json({ error: 'Action non autorisée' });
     }
 });
 
-// GET /api/vendors/:id/products - Récupérer les produits d'un vendeur
+// GET /api/sellers/:id/products - Récupérer les produits d'un vendeur
 router.get('/:id/products', async (req, res) => {
     try {
         const { id } = req.params;
@@ -154,7 +154,7 @@ router.get('/:id/products', async (req, res) => {
     }
 });
 
-// GET /api/vendors/:id/orders - Récupérer les commandes contenant les produits d'un vendeur
+// GET /api/sellers/:id/orders - Récupérer les commandes contenant les produits d'un vendeur
 router.get('/:id/orders', async (req, res) => {
     try {
         const { id } = req.params;
@@ -177,7 +177,7 @@ router.get('/:id/orders', async (req, res) => {
     }
 });
 
-// GET /api/vendors/:id/stats - Statistiques du vendeur
+// GET /api/sellers/:id/stats - Statistiques du vendeur
 router.get('/:id/stats', async (req, res) => {
     try {
         const { id } = req.params;
@@ -207,7 +207,7 @@ router.get('/:id/stats', async (req, res) => {
     }
 });
 
-// DELETE /api/vendors/:id - Supprimer un profil vendeur (ADMIN)
+// DELETE /api/sellers/:id - Supprimer un profil vendeur (ADMIN)
 router.delete('/:id', async (req, res) => {
     try {
         const { id } = req.params;

@@ -12,10 +12,7 @@
 const express = require('express');
 const router = express.Router();
 
-// Middleware d'authentification (à implémenter)
-// const { authenticate, authorize } = require('../middlewares/auth.middleware');
-
-// GET /api/users - Liste tous les utilisateurs (ADMIN uniquement)
+// GET /api/clients - Liste tous les utilisateurs (ADMIN uniquement)
 router.get('/', async (req, res) => {
     try {
         // TODO: Vérifier que l'utilisateur est ADMIN
@@ -23,7 +20,7 @@ router.get('/', async (req, res) => {
         // TODO: Récupérer la liste des utilisateurs avec leur rôle
 
         res.status(200).json({
-            users: [],
+            clients: [],
             pagination: {
                 page: 1,
                 limit: 10,
@@ -35,7 +32,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// GET /api/users/:id - Détails d'un utilisateur spécifique
+// GET /api/clients/:id - Détails d'un utilisateur spécifique
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -45,9 +42,9 @@ router.get('/:id', async (req, res) => {
         // TODO: Inclure le rôle, profil vendeur si applicable
 
         res.status(200).json({
-            user: {
+            client: {
                 id,
-                email: 'user@example.com',
+                email: 'client@example.com',
                 nom: 'Doe',
                 prenom: 'John',
                 role: { id: 1, nom: 'CLIENT' },
@@ -60,7 +57,7 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// PUT /api/users/:id - Mise à jour des informations d'un utilisateur
+// PUT /api/clients/:id - Mise à jour des informations d'un utilisateur
 router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -73,14 +70,14 @@ router.put('/:id', async (req, res) => {
 
         res.status(200).json({
             message: 'Profil mis à jour avec succès',
-            user: { id, nom, prenom, email }
+            client: { id, nom, prenom, email }
         });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
 });
 
-// PATCH /api/users/:id/toggle-status - Activer/Désactiver un compte utilisateur (ADMIN)
+// PATCH /api/clients/:id/toggle-status - Activer/Désactiver un compte utilisateur (ADMIN)
 router.patch('/:id/toggle-status', async (req, res) => {
     try {
         const { id } = req.params;
@@ -98,7 +95,7 @@ router.patch('/:id/toggle-status', async (req, res) => {
     }
 });
 
-// PATCH /api/users/:id/change-role - Modifier le rôle d'un utilisateur (ADMIN)
+// PATCH /api/clients/:id/change-role - Modifier le rôle d'un utilisateur (ADMIN)
 router.patch('/:id/change-role', async (req, res) => {
     try {
         const { id } = req.params;
@@ -119,7 +116,7 @@ router.patch('/:id/change-role', async (req, res) => {
     }
 });
 
-// DELETE /api/users/:id - Supprimer un compte utilisateur
+// DELETE /api/clients/:id - Supprimer un compte utilisateur
 router.delete('/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -135,7 +132,7 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-// GET /api/users/:id/orders - Récupérer les commandes d'un utilisateur
+// GET /api/clients/:id/orders - Récupérer les commandes d'un utilisateur
 router.get('/:id/orders', async (req, res) => {
     try {
         const { id } = req.params;
@@ -157,7 +154,7 @@ router.get('/:id/orders', async (req, res) => {
     }
 });
 
-// GET /api/users/:id/comments - Récupérer les commentaires d'un utilisateur
+// GET /api/clients/:id/comments - Récupérer les commentaires d'un utilisateur
 router.get('/:id/comments', async (req, res) => {
     try {
         const { id } = req.params;

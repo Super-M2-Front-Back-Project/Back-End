@@ -13,8 +13,8 @@ const router = express.Router();
 
 // Import des routes par domaine
 const authRoutes = require('./auth.routes');
-const usersRoutes = require('./users.routes');
-const vendorsRoutes = require('./vendors.routes');
+const clientsRoutes = require('./clients.routes');
+const sellersRoutes = require('./sellers.routes');
 const productsRoutes = require('./products.routes');
 const categoriesRoutes = require('./categories.routes');
 const cartRoutes = require('./cart.routes');
@@ -23,8 +23,8 @@ const commentsRoutes = require('./comments.routes');
 
 // Montage des routes avec leurs préfixes
 router.use('/auth', authRoutes);
-router.use('/users', usersRoutes);
-router.use('/vendors', vendorsRoutes);
+router.use('/clients', clientsRoutes);
+router.use('/sellers', sellersRoutes);
 router.use('/products', productsRoutes);
 router.use('/categories', categoriesRoutes);
 router.use('/cart', cartRoutes);
