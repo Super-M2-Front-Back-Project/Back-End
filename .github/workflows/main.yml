@@ -1,12 +1,12 @@
-name: CI — Next.js TypeScript
+name: CI — Express.js Backend
 
 on:
-  # CI classique sur chaque PR vers main
+  # Lancement à chaque Pull Request vers main
   pull_request:
     branches:
       - main
 
-  # Hook déclenché quand une PR est fermée (pour le déploiement après merge)
+  # Déploiement quand une PR vers main est mergeée
   pull_request_target:
     types: [closed]
     branches:
@@ -14,7 +14,7 @@ on:
 
 jobs:
   check_branch:
-    # Vérifie que seule la branche dev peut ouvrir une PR vers main
+    # Vérifie que seule la branche dev peut merger dans main
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18.x]
+        node-version: [18.x, 20.x] # teste sur 2 versions de Node
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -48,16 +48,17 @@ jobs:
       - name: Lint (ESLint)
         run: npm run lint --if-present
 
-      - name: Type check (tsc)
+      - name: Type check (TypeScript)
         run: npm run type-check --if-present
 
-      - name: Run tests
+      - name: Run unit tests (Jest)
         run: npm test --if-present
 
-      - name: Build (Next.js)
+      - name: Build (TypeScript)
         run: npm run build --if-present
 
   deploy:
+    # Déploiement après merge vers main
     if: github.event_name == 'pull_request_target' && github.event.pull_request.merged == true
     name: Deploy (after merge to main)
     runs-on: ubuntu-latest
@@ -65,5 +66,5 @@ jobs:
       - name: Trigger deployment webhook (Render / autre)
         if: ${{ secrets.RENDER_HOOK_URL != '' }}
         run: |
-          echo "🚀 Deployment triggered after merge to main"
+          echo "🚀 Backend deployment triggered after merge to main"
           curl -s -X POST "${{ secrets.RENDER_HOOK_URL }}" -o /dev/null -w "%{http_code}\n"
