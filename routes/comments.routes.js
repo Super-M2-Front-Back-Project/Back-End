@@ -182,38 +182,6 @@ router.get('/pending', async (req, res) => {
     }
 });
 
-// GET /api/comments/stats - Statistiques des commentaires
-router.get('/stats', async (req, res) => {
-    try {
-        const { produit_id } = req.query;
-
-        // TODO: Si produit_id fourni : stats pour ce produit
-        // TODO: Sinon : stats globales (ADMIN uniquement)
-        // TODO: Calculer :
-        //   - Note moyenne
-        //   - Distribution des notes (1-5)
-        //   - Nombre total de commentaires
-        //   - Commentaires en attente
-
-        res.status(200).json({
-            stats: {
-                average_rating: 0,
-                total_comments: 0,
-                pending_comments: 0,
-                ratings_distribution: {
-                    5: 0,
-                    4: 0,
-                    3: 0,
-                    2: 0,
-                    1: 0
-                }
-            }
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
 // POST /api/comments/:id/report - Signaler un commentaire inapproprié
 router.post('/:id/report', async (req, res) => {
     try {

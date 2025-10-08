@@ -210,18 +210,7 @@ router.get('/:id/comments', async (req, res) => {
         // TODO: Pagination et tri
 
         res.status(200).json({
-            comments: [],
-            stats: {
-                average_rating: 0,
-                total: 0,
-                ratings_distribution: {
-                    5: 0,
-                    4: 0,
-                    3: 0,
-                    2: 0,
-                    1: 0
-                }
-            }
+            comments: []
         });
     } catch (error) {
         res.status(500).json({ error: error.message });

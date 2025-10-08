@@ -6,7 +6,6 @@
  * - Profil vendeur
  * - Vérification vendeur (ADMIN)
  * - Statistiques vendeur
- * - Gestion commission
  */
 
 const express = require('express');
@@ -47,7 +46,6 @@ router.get('/:id', async (req, res) => {
                 nom_boutique: 'Ma Boutique',
                 description: 'Description de la boutique',
                 siret: '12345678901234',
-                commission_pourcent: 15.5,
                 is_verified: true,
                 created_at: new Date()
             }
@@ -113,25 +111,6 @@ router.patch('/:id/verify', async (req, res) => {
     }
 });
 
-// PATCH /api/sellers/:id/commission - Modifier la commission d'un vendeur (ADMIN)
-router.patch('/:id/commission', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { commission_pourcent } = req.body;
-
-        // TODO: Vérifier que l'utilisateur est ADMIN
-        // TODO: Valider que commission_pourcent est entre 0 et 100
-        // TODO: Mettre à jour la commission
-
-        res.status(200).json({
-            message: 'Commission mise à jour',
-            seller: { id, commission_pourcent }
-        });
-    } catch (error) {
-        res.status(403).json({ error: 'Action non autorisée' });
-    }
-});
-
 // GET /api/sellers/:id/products - Récupérer les produits d'un vendeur
 router.get('/:id/products', async (req, res) => {
     try {
@@ -161,46 +140,10 @@ router.get('/:id/orders', async (req, res) => {
 
         // TODO: Vérifier que l'utilisateur est le vendeur ou ADMIN
         // TODO: Récupérer les commandes avec items du vendeur
-        // TODO: Calculer commissions
         // TODO: Filtres par statut, date
 
         res.status(200).json({
-            orders: [],
-            stats: {
-                total_orders: 0,
-                total_revenue: 0,
-                total_commission: 0
-            }
-        });
-    } catch (error) {
-        res.status(403).json({ error: 'Action non autorisée' });
-    }
-});
-
-// GET /api/sellers/:id/stats - Statistiques du vendeur
-router.get('/:id/stats', async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        // TODO: Vérifier que l'utilisateur est le vendeur ou ADMIN
-        // TODO: Calculer statistiques :
-        //   - Nombre de produits actifs
-        //   - Nombre de ventes
-        //   - Chiffre d'affaires
-        //   - Commissions totales
-        //   - Note moyenne des produits
-        //   - Évolution mensuelle
-
-        res.status(200).json({
-            stats: {
-                total_products: 0,
-                active_products: 0,
-                total_sales: 0,
-                total_revenue: 0,
-                total_commission: 0,
-                average_rating: 0,
-                monthly_evolution: []
-            }
+            orders: []
         });
     } catch (error) {
         res.status(403).json({ error: 'Action non autorisée' });

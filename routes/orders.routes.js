@@ -48,7 +48,7 @@ router.get('/:id', async (req, res) => {
         //   - CLIENT : uniquement ses commandes
         //   - VENDEUR : commandes contenant ses produits
         //   - ADMIN : toutes
-        // TODO: Inclure détails produits, vendeurs, calcul commissions
+        // TODO: Inclure détails produits, vendeurs
 
         res.status(200).json({
             order: {
@@ -79,7 +79,6 @@ router.post('/', async (req, res) => {
         // TODO: Copier les items du panier vers items_commande avec prix figé
         // TODO: Déduire les stocks
         // TODO: Vider le panier
-        // TODO: Calculer les commissions par vendeur
         // TODO: Envoyer notifications (email, etc.)
 
         res.status(201).json({
@@ -159,33 +158,6 @@ router.get('/:id/tracking', async (req, res) => {
     }
 });
 
-// GET /api/orders/stats/summary - Statistiques des commandes
-router.get('/stats/summary', async (req, res) => {
-    try {
-        // TODO: Vérifier permissions (ADMIN ou VENDEUR pour ses produits)
-        // TODO: Calculer statistiques :
-        //   - Nombre total de commandes
-        //   - Montant total
-        //   - Commandes par statut
-        //   - Évolution temporelle
-
-        res.status(200).json({
-            total_orders: 0,
-            total_revenue: 0,
-            orders_by_status: {
-                EN_ATTENTE: 0,
-                EN_PREPARATION: 0,
-                EXPEDIE: 0,
-                LIVRE: 0,
-                ANNULE: 0
-            },
-            monthly_stats: []
-        });
-    } catch (error) {
-        res.status(403).json({ error: 'Action non autorisée' });
-    }
-});
-
 // GET /api/orders/:id/invoice - Télécharger la facture
 router.get('/:id/invoice', async (req, res) => {
     try {
@@ -193,7 +165,7 @@ router.get('/:id/invoice', async (req, res) => {
 
         // TODO: Vérifier permissions (client propriétaire, vendeur concerné, ou ADMIN)
         // TODO: Générer PDF de la facture
-        // TODO: Inclure détails commande, items, commissions vendeurs
+        // TODO: Inclure détails commande, items
 
         res.status(200).json({
             message: 'Facture générée',
