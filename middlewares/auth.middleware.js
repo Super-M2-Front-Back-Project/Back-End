@@ -10,12 +10,11 @@ const authenticate = async (req, res, next) => {
 
         const { data: userData, error: dbError } = await supabase
             .from('users')
-            .select('id, email, nom, prenom, is_active, role:roles(id, nom)')
+            .select('id, email, nom, prenom, adresse, role:roles(id, nom)')
             .eq('id', user.id)
             .single();
 
         if (dbError || !userData) return res.status(404).json({ error: 'Utilisateur non trouvé' });
-        if (!userData.is_active) return res.status(403).json({ error: 'Compte désactivé' });
 
         if (userData.role?.nom === 'VENDEUR') {
             const { data: vendeur } = await supabase

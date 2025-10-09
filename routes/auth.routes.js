@@ -6,7 +6,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const router = express.Router();
 
 router.post('/register', asyncHandler(async (req, res) => {
-    const { email, password, nom, prenom } = req.body;
+    const { email, password, nom, prenom, adresse, telephone } = req.body;
 
     const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
     if (authError) throw authError;
@@ -18,11 +18,11 @@ router.post('/register', asyncHandler(async (req, res) => {
         email,
         nom,
         prenom,
+        adresse,
+        telephone,
         role_id: role.id
     });
     if (userError) throw userError;
-
-    await supabase.from('panier').insert({ user_id: authData.user.id });
 
     res.status(201).json({ message: 'Inscription réussie' });
 }));
