@@ -1,73 +1,75 @@
 const express = require('express');
-const { supabase } = require('../config/supabase');
 const { authenticate } = require('../middlewares/auth.middleware');
 const asyncHandler = require('../utils/asyncHandler');
+const { postCart, getCart, updateCart, deleteCartItem, deleteCartByUser } = require('../controller/cartController');
 
 const router = express.Router();
 
-router.get('/', authenticate, asyncHandler(async (req, res) => {
-    const { data: panier } = await supabase
-        .from('panier')
-        .select('id, items:items_panier(id, quantite, produit:produits(id, nom, prix, image_url))')
-        .eq('user_id', req.user.id)
-        .single();
+router.get('/get', asyncHandler(async (req, res) => {
+    const { user_id } = req.body;
 
-    const total = panier.items.reduce((sum, item) => sum + (item.produit.prix * item.quantite), 0);
+    if (!user_id) {
+        return res.status(400).json({ error: 'un utilisateur est requis' });
+    }
 
-    res.json({ ...panier, total, total_items: panier.items.length });
+    const cart = await getCart(user_id);
+    res.json(cart);
 }));
 
-router.post('/items', authenticate, asyncHandler(async (req, res) => {
-    const { produit_id, quantite = 1 } = req.body;
+router.post('/post', asyncHandler(async (req, res) => {
+    try {
+        const { user_id, item_id } = req.body;
 
-    const { data: panier } = await supabase
-        .from('panier')
-        .select('id')
-        .eq('user_id', req.user.id)
-        .single();
+        if (!user_id || !item_id) {
+            return res.status(400).json({ error: 'un utilisateur et un produit sont requis' });
+        }
 
-    const { data: item, error } = await supabase
-        .from('items_panier')
-        .insert({ panier_id: panier.id, produit_id, quantite })
-        .select()
-        .single();
+        const result = await postCart(user_id, item_id);
+        res.status(201).json(result);
 
-    if (error) throw error;
-    res.status(201).json({ item });
+    } catch (error) {
+        console.error('Erreur lors de l\'ajout au panier:', error);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
+    }
+
+    const result = await postCart(req, res);
+
+    res.json(result);
 }));
 
-router.put('/items/:item_id', authenticate, asyncHandler(async (req, res) => {
-    const { item_id } = req.params;
-    const { quantite } = req.body;
+router.put('/update/:user_id', asyncHandler(async (req, res) => {
+    const { user_id } = req.params;
+    const { item_id, quantity } = req.body;
 
-    const { error } = await supabase
-        .from('items_panier')
-        .update({ quantite })
-        .eq('id', item_id);
+    if (!user_id || !item_id || !quantity) {
+        return res.status(400).json({ error: 'un utilisateur, un produit et une quantité sont requis' });
+    }
 
-    if (error) throw error;
-    res.json({ message: 'Quantité mise à jour' });
+    const result = await updateCart(user_id, item_id, quantity);
+    res.json(result);
 }));
 
-router.delete('/items/:item_id', authenticate, asyncHandler(async (req, res) => {
-    const { error } = await supabase
-        .from('items_panier')
-        .delete()
-        .eq('id', req.params.item_id);
+router.delete('/delete/item', asyncHandler(async (req, res) => {
+    const { item_id, user_id } = req.body;
 
-    if (error) throw error;
-    res.json({ message: 'Produit retiré' });
+    if (!item_id) {
+        return res.status(400).json({ error: 'un produit est requis' });
+    }
+
+    const result = await deleteCartItem(item_id, user_id);
+    res.json(result);
 }));
 
-router.delete('/', authenticate, asyncHandler(async (req, res) => {
-    const { data: panier } = await supabase
-        .from('panier')
-        .select('id')
-        .eq('user_id', req.user.id)
-        .single();
+router.delete('/delete/all', asyncHandler(async (req, res) => {
+    const { user_id } = req.body;
 
-    await supabase.from('items_panier').delete().eq('panier_id', panier.id);
-    res.json({ message: 'Panier vidé' });
+    if (!user_id) {
+        return res.status(400).json({ error: 'un utilisateur est requis' });
+    }
+
+    const result = await deleteCartByUser(user_id);
+    res.json(result);
 }));
+
 
 module.exports = router;
