@@ -95,12 +95,33 @@ const getOrder = async () => {
 };
 
 const getOrderById = async (order_id) => {
+    if (!order_id) {
+        throw new Error('ID de commande invalide');
+    }
+
     try {
-        const { data: order } = await supabase
+        const { data: order, error } = await supabase
             .from('commandes')
-            .select('id, user_id, total, statut')
+            .select(`
+                id,
+                user_id,
+                total,
+                statut,
+                items_commande (
+                    id,
+                    produit_id,
+                    quantite,
+                    produits (
+                        *
+                    )
+                )
+            `)
             .eq('id', order_id)
             .single();
+
+        if (error) {
+            throw error;
+        }
 
         if (!order) {
             throw new Error('Commande non trouvée');
@@ -112,6 +133,7 @@ const getOrderById = async (order_id) => {
         throw error;
     }
 };
+
 
 const updateOrderStatus = async (order_id, statut) => {
     try {

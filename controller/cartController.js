@@ -66,7 +66,19 @@ const getCart = async (user_id) => {
         console.log('Récupération du panier pour l\'utilisateur:', user_id);
         const { data: panier } = await supabase
             .from('panier')
-            .select('id, items:items_panier(id, quantite, produit:produits(id, nom, prix, image_url))')
+            .select(`
+                id,
+                items:items_panier(
+                    id,
+                    quantite,
+                    produit:produits(
+                        id,
+                        nom,
+                        prix,
+                        image_url
+                    )
+                )
+            `)
             .eq('user_id', user_id)
             .single();
 
