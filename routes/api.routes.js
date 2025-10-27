@@ -20,6 +20,7 @@ const categoriesRoutes = require('./categories.routes');
 const cartRoutes = require('./cart.routes');
 const ordersRoutes = require('./orders.routes');
 const commentsRoutes = require('./comments.routes');
+const wishlistRoutes = require('./wishlist.route');
 
 // Montage des routes avec leurs préfixes
 router.use('/auth', authRoutes);
@@ -30,6 +31,7 @@ router.use('/categories', categoriesRoutes);
 router.use('/cart', cartRoutes);
 router.use('/orders', ordersRoutes);
 router.use('/comments', commentsRoutes);
+router.use('/wishlist', wishlistRoutes);
 
 // Route de santé / health check
 router.get('/health', (req, res) => {
