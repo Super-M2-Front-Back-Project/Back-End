@@ -7,13 +7,22 @@ const getWishlist = async (user_id) => {
     try {
         const { data: wishlist } = await supabase
             .from('wishlist')
-            .select('*')
+            .select(`
+                id,
+                added_at,
+                produit:produits(
+                    id,
+                    nom,
+                    prix,
+                    image_url
+                )
+            `)
             .eq('user_id', user_id);
 
         return wishlist;
     } catch (error) {
         console.error('Erreur dans getWishlist:', error);
-        throw error;
+        throw new Error('wishlist introuvable', error);
     }
 };
 
