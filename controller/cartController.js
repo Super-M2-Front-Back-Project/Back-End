@@ -1,4 +1,3 @@
-const express = require('express');
 const { supabase } = require('../config/supabase');
 const dotenv = require('dotenv');
 

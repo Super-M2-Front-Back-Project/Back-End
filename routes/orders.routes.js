@@ -1,178 +1,89 @@
-/**
- * Routes de gestion des commandes
- *
- * Opérations sur les commandes
- * - Liste des commandes
- * - Détails d'une commande
- * - Création de commande
- * - Modification du statut
- * - Historique
- */
-
 const express = require('express');
 const router = express.Router();
+const { postOrder, getOrder, getOrderById, updateOrderStatus, deleteOrder, getOrderByUser } = require('../controller/ordersController');
 
-// GET /api/orders - Liste des commandes
-router.get('/', async (req, res) => {
+router.post('/post', async (req, res) => {
+    const { user_id } = req.body;
+
     try {
-        const { page = 1, limit = 10, statut, date_debut, date_fin } = req.query;
-
-        // TODO: Récupérer user_id et role depuis le token
-        // TODO: Si CLIENT : ses propres commandes
-        // TODO: Si VENDEUR : commandes contenant ses produits
-        // TODO: Si ADMIN : toutes les commandes
-        // TODO: Filtres par statut, dates
-        // TODO: Pagination
-
-        res.status(200).json({
-            orders: [],
-            pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total: 0,
-                pages: 0
-            }
-        });
+        const result = await postOrder(user_id);
+        res.status(201).json(result);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Erreur lors de la création de la commande:', error);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
     }
 });
 
-// GET /api/orders/:id - Détails d'une commande spécifique
-router.get('/:id', async (req, res) => {
+router.get('/get', async (req, res) => {
     try {
-        const { id } = req.params;
-
-        // TODO: Récupérer la commande avec tous les items
-        // TODO: Vérifier les permissions :
-        //   - CLIENT : uniquement ses commandes
-        //   - VENDEUR : commandes contenant ses produits
-        //   - ADMIN : toutes
-        // TODO: Inclure détails produits, vendeurs
-
-        res.status(200).json({
-            order: {
-                id,
-                user_id: 'user_uuid',
-                date_commande: new Date(),
-                statut: 'EN_ATTENTE',
-                total: 0,
-                adresse_livraison: '123 Rue Example',
-                items: [],
-                created_at: new Date()
-            }
-        });
+        const orders = await getOrder();
+        res.json(orders);
     } catch (error) {
-        res.status(404).json({ error: 'Commande non trouvée' });
+        console.error('Erreur lors de la récupération des commandes:', error);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
     }
 });
 
-// POST /api/orders - Créer une nouvelle commande
-router.post('/', async (req, res) => {
+router.get('/get/order_id', async (req, res) => {
     try {
-        const { adresse_livraison } = req.body;
+        const { order_id } = req.body;
 
-        // TODO: Récupérer user_id depuis le token
-        // TODO: Récupérer le panier de l'utilisateur
-        // TODO: Valider le panier (produits actifs, stock disponible)
-        // TODO: Créer la commande
-        // TODO: Copier les items du panier vers items_commande avec prix figé
-        // TODO: Déduire les stocks
-        // TODO: Vider le panier
-        // TODO: Envoyer notifications (email, etc.)
+        if (!order_id) {
+            return res.status(400).json({ error: 'un ID de commande est requis' });
+        }
 
-        res.status(201).json({
-            message: 'Commande créée avec succès',
-            order: {
-                id: 'new_order_id',
-                total: 0,
-                statut: 'EN_ATTENTE'
-            }
-        });
+        const order = await getOrderById(order_id);
+        res.json(order);
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        console.error('Erreur lors de la récupération de la commande:', error);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
     }
 });
 
-// PATCH /api/orders/:id/status - Modifier le statut d'une commande
-router.patch('/:id/status', async (req, res) => {
+router.get('/get/user_id', async (req, res) => {
     try {
-        const { id } = req.params;
+        const { user_id } = req.body;
+
+        if (!user_id) {
+            return res.status(400).json({ error: 'un ID d\'utilisateur est requis' });
+        }
+
+        const orders = await getOrderByUser(user_id);
+        res.json(orders);
+    } catch (error) {
+        console.error('Erreur lors de la récupération des commandes de l\'utilisateur:', error);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
+    }
+});
+
+router.put('/update/:order_id', async (req, res) => {
+    try {
+        const { order_id } = req.params;
         const { statut } = req.body;
 
-        // TODO: Vérifier les permissions
-        // TODO: Valider le statut (EN_ATTENTE, EN_PREPARATION, EXPEDIE, LIVRE, ANNULE)
-        // TODO: Vérifier les transitions de statut autorisées
-        // TODO: Mettre à jour le statut
-        // TODO: Notifier l'utilisateur
+        if (!order_id || !statut) {
+            return res.status(400).json({ error: 'un ID de commande et un statut sont requis' });
+        }
 
-        res.status(200).json({
-            message: 'Statut de la commande mis à jour',
-            order: { id, statut }
-        });
+        const result = await updateOrderStatus(order_id, statut);
+        res.json(result);
     } catch (error) {
-        res.status(403).json({ error: 'Action non autorisée' });
+        console.error('Erreur lors de la mise à jour de la commande:', error);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
     }
 });
 
-// POST /api/orders/:id/cancel - Annuler une commande
-router.post('/:id/cancel', async (req, res) => {
+router.delete('/delete/order_id/:order_id', async (req, res) => {
     try {
-        const { id } = req.params;
-        const { raison } = req.body;
-
-        // TODO: Vérifier les permissions (client propriétaire ou ADMIN)
-        // TODO: Vérifier que la commande peut être annulée (pas déjà expédiée)
-        // TODO: Remettre le stock des produits
-        // TODO: Mettre statut à ANNULE
-        // TODO: Enregistrer la raison d'annulation
-        // TODO: Notifier vendeurs et client
-
-        res.status(200).json({
-            message: 'Commande annulée avec succès',
-            order: { id, statut: 'ANNULE' }
-        });
+        const { order_id } = req.params;
+        if (!order_id) {
+            return res.status(400).json({ error: 'un ID de commande est requis' });
+        }
+        const result = await deleteOrder(order_id);
+        res.json(result);
     } catch (error) {
-        res.status(400).json({ error: error.message });
-    }
-});
-
-// GET /api/orders/:id/tracking - Suivi de la commande
-router.get('/:id/tracking', async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        // TODO: Récupérer l'historique des changements de statut
-        // TODO: Informations de livraison si disponibles
-
-        res.status(200).json({
-            order_id: id,
-            current_status: 'EN_PREPARATION',
-            tracking_history: [
-                { statut: 'EN_ATTENTE', date: new Date() },
-                { statut: 'EN_PREPARATION', date: new Date() }
-            ]
-        });
-    } catch (error) {
-        res.status(404).json({ error: 'Commande non trouvée' });
-    }
-});
-
-// GET /api/orders/:id/invoice - Télécharger la facture
-router.get('/:id/invoice', async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        // TODO: Vérifier permissions (client propriétaire, vendeur concerné, ou ADMIN)
-        // TODO: Générer PDF de la facture
-        // TODO: Inclure détails commande, items
-
-        res.status(200).json({
-            message: 'Facture générée',
-            invoice_url: 'url_to_pdf'
-        });
-    } catch (error) {
-        res.status(404).json({ error: 'Commande non trouvée' });
+        console.error('Erreur lors de la suppression de la commande:', error);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
     }
 });
 
