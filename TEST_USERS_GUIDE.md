@@ -51,8 +51,6 @@
 
 ## Créer des Utilisateurs de Test
 
-### Méthode 1 : Via l'API (RECOMMANDÉ)
-
 Utilisez ces requêtes Postman pour créer des utilisateurs de test :
 
 #### 1. Créer un CLIENT
@@ -136,77 +134,6 @@ Content-Type: application/json
 -- Changer le rôle en ADMIN
 UPDATE users
 SET role_id = (SELECT id FROM roles WHERE nom = 'ADMIN')
-WHERE email = 'admin.test@example.com';
-```
-
----
-
-### Méthode 2 : Script SQL Complet (Alternative)
-
-⚠️ **LIMITATION** : Cette méthode ne fonctionne PAS directement car Supabase Auth gère les mots de passe de façon sécurisée. Vous devez utiliser la Méthode 1.
-
-Si vous voulez absolument passer par SQL uniquement, vous devez :
-1. Créer les comptes via le Supabase Dashboard (Auth > Users > Add User)
-2. Puis exécuter ce SQL pour compléter les profils :
-
-```sql
--- Script à exécuter APRÈS avoir créé les comptes via Supabase Dashboard
-
--- 1. Créer le profil CLIENT
-INSERT INTO users (id, email, nom, prenom, role_id, date_naissance, rue, code_postal, ville, telephone)
-SELECT
-  auth.users.id,
-  'client.test@example.com',
-  'Dupont',
-  'Jean',
-  (SELECT id FROM roles WHERE nom = 'CLIENT'),
-  '1995-05-15',
-  '123 Rue de la Paix',
-  '75001',
-  'Paris',
-  '0601020304'
-FROM auth.users
-WHERE email = 'client.test@example.com';
-
--- 2. Créer le profil VENDEUR + profil vendeur
-INSERT INTO users (id, email, nom, prenom, role_id, date_naissance, rue, code_postal, ville, telephone)
-SELECT
-  auth.users.id,
-  'vendeur.test@example.com',
-  'Martin',
-  'Sophie',
-  (SELECT id FROM roles WHERE nom = 'VENDEUR'),
-  '1988-08-20',
-  '456 Avenue du Commerce',
-  '69001',
-  'Lyon',
-  '0612345678'
-FROM auth.users
-WHERE email = 'vendeur.test@example.com';
-
-INSERT INTO vendeurs (user_id, nom_boutique, description, is_verified)
-SELECT
-  id,
-  'Boutique Test',
-  'Boutique de test pour Postman',
-  true
-FROM users
-WHERE email = 'vendeur.test@example.com';
-
--- 3. Créer le profil ADMIN
-INSERT INTO users (id, email, nom, prenom, role_id, date_naissance, rue, code_postal, ville, telephone)
-SELECT
-  auth.users.id,
-  'admin.test@example.com',
-  'Administrateur',
-  'Super',
-  (SELECT id FROM roles WHERE nom = 'ADMIN'),
-  '1985-01-01',
-  '789 Boulevard Admin',
-  '13001',
-  'Marseille',
-  '0698765432'
-FROM auth.users
 WHERE email = 'admin.test@example.com';
 ```
 
@@ -309,10 +236,11 @@ Authorization: Bearer {{access_token}}
 
 ## Résumé
 
-1. ✅ Utilisez la **Méthode 1** (API + SQL) pour créer les utilisateurs
-2. ✅ Configurez 3 environnements Postman (CLIENT, VENDEUR, ADMIN)
-3. ✅ Faites un login pour chaque utilisateur pour récupérer le token
-4. ✅ Utilisez le token dans l'en-tête `Authorization: Bearer {token}`
-5. ✅ Testez toutes les routes selon les permissions
+1. ✅ Créez les utilisateurs via l'API (POST /api/auth/register)
+2. ✅ Exécutez le script SQL `scripts/create-test-users.sql` pour les rôles VENDEUR et ADMIN
+3. ✅ Configurez 3 environnements Postman (CLIENT, VENDEUR, ADMIN)
+4. ✅ Faites un login pour chaque utilisateur pour récupérer le token
+5. ✅ Utilisez le token dans l'en-tête `Authorization: Bearer {token}`
+6. ✅ Testez toutes les routes selon les permissions
 
 **Mot de passe de tous les comptes de test :** `Test1234!`
