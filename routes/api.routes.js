@@ -19,7 +19,7 @@ const productsRoutes = require('./products.routes');
 const categoriesRoutes = require('./categories.routes');
 const cartRoutes = require('./cart.routes');
 const ordersRoutes = require('./orders.routes');
-const commentsRoutes = require('./comments.routes');
+// const commentsRoutes = require('./comments.routes');
 const wishlistRoutes = require('./wishlist.routes');
 const paymentsRoutes = require('./payments.routes');
 
@@ -31,7 +31,7 @@ router.use('/products', productsRoutes);
 router.use('/categories', categoriesRoutes);
 router.use('/cart', cartRoutes);
 router.use('/orders', ordersRoutes);
-router.use('/comments', commentsRoutes);
+// router.use('/comments', commentsRoutes);
 router.use('/wishlist', wishlistRoutes);
 router.use('/payments', paymentsRoutes);
 
