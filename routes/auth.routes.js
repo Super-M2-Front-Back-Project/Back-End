@@ -2,25 +2,13 @@ const express = require('express');
 const { supabase, supabaseAdmin } = require('../config/supabase');
 const { authenticate } = require('../middlewares/auth.middleware');
 const asyncHandler = require('../utils/asyncHandler');
+const { registerUser, loginUser } = require('../controller/authController');
 
 const router = express.Router();
 
 // Regex de validation
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_MIN_LENGTH = 8;
-
-// Helper: récupérer les données utilisateur complètes
-const getUserWithRole = async (userId) => {
-    const { data, error } = await supabase
-        .from('users')
-        .select('id, email, nom, prenom, adresse, role:roles(id, nom)')
-        .eq('id', userId)
-        .single();
-
-    if (error) throw error;
-    if (!data) throw new Error('Utilisateur non trouvé');
-    return data;
-};
 
 router.post('/register', asyncHandler(async (req, res) => {
     const {
@@ -91,52 +79,18 @@ router.post('/register', asyncHandler(async (req, res) => {
         });
     }
 
-    // Récupérer le rôle CLIENT
-    const { data: role, error: roleError } = await supabase
-        .from('roles')
-        .select('id')
-        .eq('nom', 'CLIENT')
-        .single();
-
-    if (roleError || !role) {
-        throw new Error('Rôle CLIENT non trouvé - base de données non initialisée');
-    }
-
-    // Créer le compte auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: sanitizedEmail,
-        password
-    });
-
-    if (authError) throw authError;
-    if (!authData.user) throw new Error('Échec de création du compte');
-
-    // Insérer dans la table users
-    try {
-        const { error: userError } = await supabase.from('users').insert({
-            id: authData.user.id,
-            email: sanitizedEmail,
-            nom: sanitizedNom,
-            prenom: sanitizedPrenom,
-            date_naissance,
-            rue: sanitizedRue,
-            code_postal: sanitizedCodePostal,
-            ville: sanitizedVille,
-            telephone: telephone?.trim() || null,
-            // Ancienne colonne pour rétrocompatibilité (peut être supprimée après migration complète)
-            adresse: adresse?.trim() || `${sanitizedRue}, ${sanitizedCodePostal} ${sanitizedVille}`,
-            role_id: role.id
-        });
-
-        if (userError) throw userError;
-
-    } catch (error) {
-        // Rollback: supprimer le compte auth si l'insertion users échoue
-        if (supabaseAdmin) {
-            await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-        }
-        throw error;
-    }
+    await registerUser(
+        sanitizedEmail,
+        password,
+        sanitizedNom,
+        sanitizedPrenom,
+        date_naissance,
+        sanitizedRue,
+        sanitizedCodePostal,
+        sanitizedVille,
+        telephone,
+        adresse
+    );
 
     res.status(201).json({
         message: 'Inscription réussie',
@@ -158,21 +112,10 @@ router.post('/login', asyncHandler(async (req, res) => {
 
     const sanitizedEmail = email.trim().toLowerCase();
 
-    // Authentification
-    const { data, error } = await supabase.auth.signInWithPassword({
-        email: sanitizedEmail,
-        password
-    });
-
-    if (error) {
-        return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
-    }
-
-    // Récupérer les données utilisateur
-    const user = await getUserWithRole(data.user.id);
+    const { token, user } = await loginUser(sanitizedEmail, password);
 
     res.json({
-        token: data.session.access_token,
+        token,
         user
     });
 }));
