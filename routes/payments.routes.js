@@ -3,13 +3,15 @@ const { supabase } = require("../config/supabase");
 const Stripe = require("stripe");
 const dotenv = require("dotenv");
 const { createPaymentIntent } = require("../controller/paymentController");
+const { validatePostPayment } = require("../middlewares/verificators/paymentValidator");
+const validate = require("../middlewares/verificators/validate");
 
 dotenv.config();
 
 const router = express.Router();
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
-router.post("/checkout/payment-intent", async (req, res) => {
+router.post("/checkout/payment-intent", validatePostPayment, validate, async (req, res) => {
   const { order_id } = req.body;
   
   try {
