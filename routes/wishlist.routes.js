@@ -2,10 +2,12 @@ const express = require('express');
 const { authenticate } = require('../middlewares/auth.middleware');
 const asyncHandler = require('../utils/asyncHandler');
 const { getWishlist, postWishlist, deleteWishlistItem } = require('../controller/wishlistController');
+const { validateGetWishlist, validatePostWishlist, validateDeleteWishlist } = require('../middlewares/verificators/wishlistValidator');
+const validate = require('../middlewares/verificators/validate');
 
 const router = express.Router();
 
-router.get('/get', asyncHandler(async (req, res) => {
+router.get('/get', validateGetWishlist, validate, asyncHandler(async (req, res) => {
     try {
         const { user_id } = req.body;
 
@@ -21,7 +23,7 @@ router.get('/get', asyncHandler(async (req, res) => {
     }
 }));
 
-router.post('/post', asyncHandler(async (req, res) => {
+router.post('/post', validatePostWishlist, validate, asyncHandler(async (req, res) => {
     try {
         const { user_id, item_id } = req.body;
 
@@ -38,7 +40,7 @@ router.post('/post', asyncHandler(async (req, res) => {
     }
 }));
 
-router.delete('/delete', asyncHandler(async (req, res) => {
+router.delete('/delete', validateDeleteWishlist, validate, asyncHandler(async (req, res) => {
     const { item_id, user_id } = req.body;
 
     if (!item_id) {
