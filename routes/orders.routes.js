@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { postOrder, getOrder, getOrderById, updateOrderStatus, deleteOrder, getOrderByUser } = require('../controller/ordersController');
+const { validatePostOrder, validateGetOrderById, validateGetOrderByUser, validateUpdateOrderStatus, validateDeleteOrder } = require('../middlewares/verificators/orderValidator');
+const validate = require('../middlewares/verificators/validate');
 
-router.post('/post', async (req, res) => {
+router.post('/post', validatePostOrder, validate, async (req, res) => {
     const { user_id } = req.body;
 
     try {
@@ -24,7 +26,7 @@ router.get('/get', async (req, res) => {
     }
 });
 
-router.get('/get/order_id', async (req, res) => {
+router.get('/get/order_id', validateGetOrderById, validate, async (req, res) => {
     try {
         const { order_id } = req.body;
 
@@ -40,7 +42,7 @@ router.get('/get/order_id', async (req, res) => {
     }
 });
 
-router.get('/get/user_id', async (req, res) => {
+router.get('/get/user_id', validateGetOrderByUser, validate, async (req, res) => {
     try {
         const { user_id } = req.body;
 
@@ -56,7 +58,7 @@ router.get('/get/user_id', async (req, res) => {
     }
 });
 
-router.put('/update/:order_id', async (req, res) => {
+router.put('/update/:order_id', validateUpdateOrderStatus, validate, async (req, res) => {
     try {
         const { order_id } = req.params;
         const { statut } = req.body;
@@ -73,7 +75,7 @@ router.put('/update/:order_id', async (req, res) => {
     }
 });
 
-router.delete('/delete/order_id/:order_id', async (req, res) => {
+router.delete('/delete/order_id/:order_id', validateDeleteOrder, validate, async (req, res) => {
     try {
         const { order_id } = req.params;
         if (!order_id) {

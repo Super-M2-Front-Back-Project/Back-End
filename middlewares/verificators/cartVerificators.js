@@ -1,5 +1,4 @@
 const { body, param } = require("express-validator");
-const validate = require("./validate");
 
 const validateGetCart = [
     body("user_id")
