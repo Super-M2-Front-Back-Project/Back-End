@@ -17,9 +17,6 @@ const clientsRoutes = require('./clients.routes');
 const sellersRoutes = require('./sellers.routes');
 const productsRoutes = require('./products.routes');
 const categoriesRoutes = require('./categories.routes');
-const cartRoutes = require('./cart.routes');
-const ordersRoutes = require('./orders.routes');
-const commentsRoutes = require('./comments.routes');
 
 // Montage des routes avec leurs préfixes
 router.use('/auth', authRoutes);
@@ -27,9 +24,6 @@ router.use('/clients', clientsRoutes);
 router.use('/sellers', sellersRoutes);
 router.use('/products', productsRoutes);
 router.use('/categories', categoriesRoutes);
-router.use('/cart', cartRoutes);
-router.use('/orders', ordersRoutes);
-router.use('/comments', commentsRoutes);
 
 // Route de santé / health check
 router.get('/health', (req, res) => {

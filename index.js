@@ -17,8 +17,8 @@ app.get('/', (req, res) => res.json({
     docs: '/api/health'
 }));
 
-app.all(/.*/, (req, res) => res.status(404).json({ error: 'Route non trouvée' }));
 app.use(errorHandler);
 
 const port = process.env.PORT || 3000;
+app.all(/.*/, (req, res) => res.status(404).json({ error: 'Route non trouvée' }));
 app.listen(port, () => console.log(`🚀 Server running on port ${port}`));
