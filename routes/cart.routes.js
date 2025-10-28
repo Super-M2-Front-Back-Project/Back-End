@@ -2,10 +2,12 @@ const express = require('express');
 const { authenticate } = require('../middlewares/auth.middleware');
 const asyncHandler = require('../utils/asyncHandler');
 const { postCart, getCart, updateCart, deleteCartItem, deleteCartByUser } = require('../controller/cartController');
+const { validatePostCart, validateGetCart, validateUpdateCart, validateDeleteCart } = require('../middlewares/verificators/cartVerificators');
+const validate = require('../middlewares/verificators/validate');
 
 const router = express.Router();
 
-router.get('/get', asyncHandler(async (req, res) => {
+router.get('/get', validateGetCart, validate, asyncHandler(async (req, res) => {
     const { user_id } = req.body;
 
     if (!user_id) {
@@ -16,7 +18,7 @@ router.get('/get', asyncHandler(async (req, res) => {
     res.json(cart);
 }));
 
-router.post('/post', asyncHandler(async (req, res) => {
+router.post('/post', validatePostCart, validate, asyncHandler(async (req, res) => {
     try {
         const { user_id, item_id } = req.body;
 
@@ -37,7 +39,7 @@ router.post('/post', asyncHandler(async (req, res) => {
     res.json(result);
 }));
 
-router.put('/update/:user_id', asyncHandler(async (req, res) => {
+router.put('/update/:user_id', validateUpdateCart, validate, asyncHandler(async (req, res) => {
     const { user_id } = req.params;
     const { item_id, quantity } = req.body;
 
@@ -49,7 +51,7 @@ router.put('/update/:user_id', asyncHandler(async (req, res) => {
     res.json(result);
 }));
 
-router.delete('/delete/item', asyncHandler(async (req, res) => {
+router.delete('/delete/item', validateDeleteCart, validate, asyncHandler(async (req, res) => {
     const { item_id, user_id } = req.body;
 
     if (!item_id) {

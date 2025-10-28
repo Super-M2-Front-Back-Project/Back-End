@@ -2,6 +2,7 @@ const express = require("express");
 const { supabase } = require("../config/supabase");
 const Stripe = require("stripe");
 const dotenv = require("dotenv");
+const { createPaymentIntent } = require("../controller/paymentController");
 
 dotenv.config();
 
@@ -9,72 +10,28 @@ const router = express.Router();
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 router.post("/checkout/payment-intent", async (req, res) => {
+  const { order_id } = req.body;
+  
   try {
-    const { order_id } = req.body;
-
     if (!order_id) {
       return res.status(400).json({ error: "un ID de commande est requis" });
     }
 
-    // Récupérer la commande depuis Supabase
-    const { data: order, error } = await supabase
-      .from("commandes")
-      .select(
-        `
-        id,
-        user_id,
-        total,
-        statut,
-        items_commande (
-          id,
-          produit_id,
-          quantite,
-          produits (
-            nom,
-            prix
-          )
-        )
-      `
-      )
-      .eq("id", order_id)
-      .single();
+    const result = await createPaymentIntent(order_id);
 
-    if (error || !order) {
-      return res.status(404).json({ error: "Commande introuvable" });
+    if (result.error) {
+      return res.status(500).json({ error: result.error });
     }
 
-    // Calcul du total à payer (en centimes)
-    const totalAmount =
-      order.items_commande.reduce(
-        (acc, item) => acc + item.produits.prix * item.quantite,
-        0
-      ) * 100;
+    res.status(201).json({ message: "PaymentIntent créé avec succès", data: result });
 
-    // Créer le PaymentIntent Stripe
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(totalAmount),
-      currency: "eur",
-      metadata: { order_id: order.id },
-      automatic_payment_methods: {
-        enabled: true,
-      },
-    });
-
-    res.json({
-      clientSecret: paymentIntent.client_secret,
-      order_id: order.id,
-      amount: totalAmount,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error("Erreur lors de la création du PaymentIntent :", error);
+    res.status(500).json({ error: "Erreur interne du serveur" });
   }
 });
 
-router.post(
-  "/webhooks/stripe",
-  express.raw({ type: "application/json" }),
-  async (req, res) => {
+router.post("/webhooks/stripe", express.raw({ type: "application/json" }), async (req, res) => {
     const sig = req.headers["stripe-signature"];
     let event;
 
