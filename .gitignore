@@ -1,5 +1,8 @@
 /node_modules
+/docs
+/scripts
 .env
-.env.example
 .DS_Store
 .vscode
+*.md
+/routes/comments.routes.js
