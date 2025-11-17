@@ -30,12 +30,12 @@ router.get('/', asyncHandler(async (req, res) => {
         .from('vendeurs')
         .select(`
             id,
-            nom_boutique,
+            name,
             description,
             siret,
             is_verified,
             created_at,
-            user:users(id, nom, prenom, email)
+            user:users(id, last_name, first_name, email)
         `, { count: 'exact' });
 
     // Filtre par statut de vérification
@@ -55,9 +55,9 @@ router.get('/', asyncHandler(async (req, res) => {
     // Ajouter statistiques pour chaque vendeur
     const sellersWithStats = await Promise.all(sellers.map(async (seller) => {
         const { count: productCount } = await supabase
-            .from('produits')
+            .from('products')
             .select('*', { count: 'exact', head: true })
-            .eq('vendeur_id', seller.id)
+            .eq('seller_id', seller.id)
             .eq('is_active', true);
 
         return {
@@ -83,15 +83,15 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
     // Récupérer le vendeur avec infos user
     const { data: seller, error } = await supabase
-        .from('vendeurs')
+        .from('sellers')
         .select(`
             id,
-            nom_boutique,
+            name,
             description,
             siret,
             is_verified,
             created_at,
-            user:users(id, nom, prenom)
+            user:users(id, last_name, first_name)
         `)
         .eq('id', id)
         .single();
@@ -102,16 +102,16 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
     // Statistiques publiques
     const { count: totalProducts } = await supabase
-        .from('produits')
+        .from('products')
         .select('*', { count: 'exact', head: true })
-        .eq('vendeur_id', id)
+        .eq('seller_id', id)
         .eq('is_active', true);
 
     // Calculer note moyenne des produits du vendeur
     const { data: products } = await supabase
-        .from('produits')
+        .from('products')
         .select('id')
-        .eq('vendeur_id', id)
+        .eq('seller_id', id)
         .eq('is_active', true);
 
     let totalRating = 0;
@@ -120,13 +120,13 @@ router.get('/:id', asyncHandler(async (req, res) => {
     if (products && products.length > 0) {
         for (const product of products) {
             const { data: comments } = await supabase
-                .from('commentaires')
-                .select('note')
-                .eq('produit_id', product.id)
+                .from('comments')
+                .select('rate')
+                .eq('product_id', product.id)
                 .eq('is_approved', true);
 
             if (comments && comments.length > 0) {
-                totalRating += comments.reduce((sum, c) => sum + c.note, 0);
+                totalRating += comments.reduce((sum, c) => sum + c.rate, 0);
                 totalComments += comments.length;
             }
         }
@@ -146,13 +146,13 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
 // POST /api/sellers - Créer un profil vendeur (nécessite rôle VENDEUR)
 router.post('/', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHandler(async (req, res) => {
-    const { nom_boutique, description, siret } = req.body;
+    const { name, description, siret } = req.body;
 
     // Validation
-    if (!nom_boutique || !siret) {
+    if (!name || !siret) {
         return res.status(400).json({
             error: 'Champs obligatoires manquants',
-            required: ['nom_boutique', 'siret']
+            required: ['name', 'siret']
         });
     }
 
@@ -163,7 +163,7 @@ router.post('/', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHandler(async
 
     // Vérifier que le SIRET n'existe pas déjà
     const { data: existingSiret } = await supabase
-        .from('vendeurs')
+        .from('sellers')
         .select('id')
         .eq('siret', siret)
         .single();
@@ -174,7 +174,7 @@ router.post('/', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHandler(async
 
     // Vérifier que l'utilisateur n'a pas déjà un profil vendeur
     const { data: existingVendeur } = await supabase
-        .from('vendeurs')
+        .from('sellers')
         .select('id')
         .eq('user_id', req.user.id)
         .single();
@@ -185,10 +185,10 @@ router.post('/', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHandler(async
 
     // Créer le profil vendeur
     const { data: seller, error } = await supabase
-        .from('vendeurs')
+        .from('sellers')
         .insert({
             user_id: req.user.id,
-            nom_boutique: nom_boutique.trim(),
+            name: name.trim(),
             description: description?.trim() || null,
             siret,
             is_verified: false

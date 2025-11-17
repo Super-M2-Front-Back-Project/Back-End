@@ -25,7 +25,7 @@ const router = express.Router();
 
 // GET /api/categories - Liste toutes les catégories
 router.get('/', asyncHandler(async (req, res) => {
-    const { sort_by = 'nom', order = 'asc' } = req.query;
+    const { sort_by = 'name', order = 'asc' } = req.query;
 
     const categories = await categoriesGetController(sort_by, order);
 
@@ -45,16 +45,16 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
 // POST /api/categories - Créer une nouvelle catégorie (ADMIN)
 router.post('/', authenticate, authorize('ADMIN'), asyncHandler(async (req, res) => {
-    const { nom, description } = req.body;
+    const { name, description } = req.body;
 
     // Validation
-    if (!nom || nom.trim().length === 0) {
-        return res.status(400).json({ error: 'Le nom de la catégorie est requis' });
+    if (!name || name.trim().length === 0) {
+        return res.status(400).json({ error: 'Le name de la catégorie est requis' });
     }
 
-    const sanitizedNom = nom.trim();
+    const sanitizedname = name.trim();
 
-    const category = await categoriesPostController(sanitizedNom, description);
+    const category = await categoriesPostController(sanitizedname, description);
 
     res.status(201).json({
         message: 'Catégorie créée avec succès',
@@ -65,9 +65,9 @@ router.post('/', authenticate, authorize('ADMIN'), asyncHandler(async (req, res)
 // PUT /api/categories/:id - Mettre à jour une catégorie (ADMIN)
 router.put('/:id', authenticate, authorize('ADMIN'), asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { nom, description } = req.body;
+    const { name, description } = req.body;
 
-    const category = await categoriesPutController(id, nom, description);
+    const category = await categoriesPutController(id, name, description);
 
     res.status(200).json({
         message: 'Catégorie mise à jour',

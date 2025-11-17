@@ -3,13 +3,13 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const registerUser = async (email, password, nom, prenom, date_naissance, rue, code_postal, ville, telephone, adresse) => {
+const registerUser = async (email, password, last_name, first_name, birthdate, street, postal_code, city, phone) => {
     try {
         // Récupérer le rôle CLIENT
         const { data: role, error: roleError } = await supabase
         .from('roles')
         .select('id')
-        .eq('nom', 'CLIENT')
+        .eq('last_name', 'CLIENT')
         .single();
 
         if (roleError || !role) {
@@ -28,15 +28,14 @@ const registerUser = async (email, password, nom, prenom, date_naissance, rue, c
         const { error: userError } = await supabase.from('users').insert({
             id: authData.user.id,
             email: email,
-            nom: nom,
-            prenom: prenom,
-            date_naissance,
-            rue: rue,
-            code_postal: code_postal,
-            ville: ville,
-            telephone: telephone?.trim() || null,
-            // Ancienne colonne pour rétrocompatibilité (peut être supprimée après migration complète)
-            adresse: adresse?.trim() || `${rue}, ${code_postal} ${ville}`,
+            last_name: last_name,
+            first_name: first_name,
+            birthdate,
+            street: street,
+            postal_code: postal_code,
+            city: city,
+            phone: phone?.trim() || null,
+            adresse: `${street}, ${postal_code}, ${city}`,
             role_id: role.id
         });
 
@@ -56,7 +55,7 @@ const loginUser = async (email, password) => {
 
         const { data: user, error: errorUser } = await supabase
             .from('users')
-            .select('id, email, nom, prenom, adresse, role:roles(id, nom)')
+            .select('id, email, last_name, first_name, adresse, role:roles(id, last_name)')
             .eq('id', data.user.id)
             .single();
 

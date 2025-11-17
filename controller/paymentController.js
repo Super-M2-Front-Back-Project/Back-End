@@ -10,20 +10,20 @@ const createPaymentIntent = async (order_id) => {
   try {
     // Récupérer la commande depuis Supabase
     const { data: order, error } = await supabase
-      .from("commandes")
+      .from("orders")
       .select(
         `
         id,
         user_id,
         total,
-        statut,
-        items_commande (
+        status,
+        items_order (
           id,
-          produit_id,
-          quantite,
-          produits (
-            nom,
-            prix
+          product_id,
+          quantity,
+          products (
+            name,
+            price
           )
         )
       `
@@ -37,8 +37,8 @@ const createPaymentIntent = async (order_id) => {
 
     // Calcul du total à payer (en centimes)
     const totalAmount =
-      order.items_commande.reduce(
-        (acc, item) => acc + item.produits.prix * item.quantite,
+      order.items_order.reduce(
+        (acc, item) => acc + item.products.price * item.quantity,
         0
       ) * 100;
 

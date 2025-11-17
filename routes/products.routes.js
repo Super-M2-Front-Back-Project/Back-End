@@ -32,28 +32,28 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
 
     // Construction de la requête de base
     let query = supabase
-        .from('produits')
+        .from('products')
         .select(`
             id,
-            nom,
+            name,
             description,
-            prix,
-            stock,
+            price,
+            quantity,
             image_url,
             is_active,
             created_at,
-            categorie:categories(id, nom),
-            vendeur:vendeurs(id, nom_boutique, user:users(nom, prenom))
+            categorie:categories(id, name),
+            seller:sellers(id, name, user:users(first_name, last_name))
         `, { count: 'exact' });
 
     // Filtrer les produits actifs uniquement (sauf pour ADMIN)
-    if (!req.user || req.user.role?.nom !== 'ADMIN') {
+    if (!req.user || req.user.role?.name !== 'ADMIN') {
         query = query.eq('is_active', true);
     }
 
     // Recherche par nom ou description
     if (search) {
-        query = query.or(`nom.ilike.%${search}%,description.ilike.%${search}%`);
+        query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
     }
 
     // Filtre par catégorie
@@ -77,7 +77,7 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
     }
 
     // Tri
-    const validSortFields = ['prix', 'created_at', 'nom', 'stock'];
+    const validSortFields = ['price', 'created_at', 'name', 'quantity'];
     const sortField = validSortFields.includes(sort_by) ? sort_by : 'created_at';
     const sortOrder = order === 'asc' ? true : false;
     query = query.order(sortField, { ascending: sortOrder });
@@ -93,13 +93,13 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
     // Calculer la note moyenne pour chaque produit
     const productsWithRatings = await Promise.all(products.map(async (product) => {
         const { data: comments } = await supabase
-            .from('commentaires')
-            .select('note')
-            .eq('produit_id', product.id)
+            .from('comments')
+            .select('rate')
+            .eq('product_id', product.id)
             .eq('is_approved', true);
 
         const averageRating = comments && comments.length > 0
-            ? comments.reduce((sum, c) => sum + c.note, 0) / comments.length
+            ? comments.reduce((sum, c) => sum + c.rate, 0) / comments.length
             : 0;
 
         return {
@@ -135,16 +135,16 @@ router.get('/search', asyncHandler(async (req, res) => {
         .from('produits')
         .select(`
             id,
-            nom,
+            name,
             description,
-            prix,
-            stock,
+            price,
+            quantity,
             image_url,
-            categorie:categories(id, nom),
-            vendeur:vendeurs(nom_boutique)
+            category:categories(id, name),
+            seller:sellers(name)
         `)
         .eq('is_active', true)
-        .or(`nom.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
+        .or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
         .limit(20);
 
     if (error) throw error;
@@ -164,19 +164,19 @@ router.get('/:id', asyncHandler(async (req, res) => {
         .from('produits')
         .select(`
             id,
-            nom,
+            name,
             description,
-            prix,
-            stock,
+            price,
+            quantity,
             image_url,
             is_active,
             created_at,
-            categorie:categories(id, nom, description),
-            vendeur:vendeurs(
+            category:categories(id, name, description),
+            seller:sellers(
                 id,
-                nom_boutique,
+                name,
                 description,
-                user:users(nom, prenom)
+                user:users(last_name, first_name)
             )
         `)
         .eq('id', id)
@@ -188,13 +188,13 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
     // Calculer la note moyenne
     const { data: comments } = await supabase
-        .from('commentaires')
-        .select('note')
-        .eq('produit_id', id)
+        .from('comments')
+        .select('rate')
+        .eq('product_id', id)
         .eq('is_approved', true);
 
     const averageRating = comments && comments.length > 0
-        ? comments.reduce((sum, c) => sum + c.note, 0) / comments.length
+        ? comments.reduce((sum, c) => sum + c.rate, 0) / comments.length
         : 0;
 
     res.status(200).json({
@@ -208,18 +208,18 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
 // POST /api/products - Créer un nouveau produit (VENDEUR/ADMIN)
 router.post('/', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHandler(async (req, res) => {
-    const { nom, description, prix, categorie_id, stock = 0, image_url } = req.body;
+    const { name, description, price, category_id, quantity = 0, image_url } = req.body;
 
     // Validation des champs obligatoires
-    if (!nom || !prix || !categorie_id) {
+    if (!name || !price || !category_id) {
         return res.status(400).json({
             error: 'Champs obligatoires manquants',
-            required: ['nom', 'prix', 'categorie_id']
+            required: ['name', 'price', 'category_id']
         });
     }
 
     // Validation du prix
-    if (parseFloat(prix) < 0) {
+    if (parseFloat(price) < 0) {
         return res.status(400).json({ error: 'Le prix ne peut pas être négatif' });
     }
 
@@ -229,37 +229,37 @@ router.post('/', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHandler(async
     }
 
     // Récupérer le vendeur_id de l'utilisateur connecté
-    const { data: vendeur } = await supabase
-        .from('vendeurs')
+    const { data: seller } = await supabase
+        .from('sellers')
         .select('id')
         .eq('user_id', req.user.id)
         .single();
 
-    if (!vendeur) {
+    if (!seller) {
         return res.status(403).json({ error: 'Profil vendeur non trouvé' });
     }
 
     // Vérifier que la catégorie existe
-    const { data: categorie } = await supabase
+    const { data: category } = await supabase
         .from('categories')
         .select('id')
-        .eq('id', categorie_id)
+        .eq('id', category_id)
         .single();
 
-    if (!categorie) {
+    if (!category) {
         return res.status(400).json({ error: 'Catégorie invalide' });
     }
 
     // Créer le produit
     const { data: product, error } = await supabase
-        .from('produits')
+        .from('products')
         .insert({
-            nom: nom.trim(),
+            name: name.trim(),
             description: description?.trim(),
-            prix: parseFloat(prix),
-            categorie_id,
-            vendeur_id: vendeur.id,
-            stock: parseInt(stock),
+            price: parseFloat(price),
+            category_id,
+            seller_id: seller.id,
+            quantity: parseInt(quantity),
             image_url: image_url?.trim(),
             is_active: true
         })
@@ -277,12 +277,12 @@ router.post('/', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHandler(async
 // PUT /api/products/:id - Mettre à jour un produit
 router.put('/:id', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { nom, description, prix, stock, image_url, categorie_id } = req.body;
+    const { name, description, price, quantity, image_url, category_id } = req.body;
 
     // Récupérer le produit
     const { data: product } = await supabase
-        .from('produits')
-        .select('vendeur_id')
+        .from('products')
+        .select('seller_id')
         .eq('id', id)
         .single();
 
@@ -291,40 +291,40 @@ router.put('/:id', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHandler(asy
     }
 
     // Vérifier les permissions (vendeur propriétaire ou ADMIN)
-    if (req.user.role.nom !== 'ADMIN') {
-        const { data: vendeur } = await supabase
-            .from('vendeurs')
+    if (req.user.role.name !== 'ADMIN') {
+        const { data: seller } = await supabase
+            .from('sellers')
             .select('id')
             .eq('user_id', req.user.id)
             .single();
 
-        if (!vendeur || vendeur.id !== product.vendeur_id) {
+        if (!seller || seller.id !== product.seller_id) {
             return res.status(403).json({ error: 'Vous ne pouvez modifier que vos propres produits' });
         }
     }
 
     // Construire l'objet de mise à jour
     const updates = {};
-    if (nom !== undefined) updates.nom = nom.trim();
+    if (name !== undefined) updates.name = name.trim();
     if (description !== undefined) updates.description = description?.trim();
-    if (prix !== undefined) {
-        if (parseFloat(prix) < 0) {
+    if (price !== undefined) {
+        if (parseFloat(price) < 0) {
             return res.status(400).json({ error: 'Le prix ne peut pas être négatif' });
         }
-        updates.prix = parseFloat(prix);
+        updates.price = parseFloat(price);
     }
-    if (stock !== undefined) {
-        if (parseInt(stock) < 0) {
+    if (quantity !== undefined) {
+        if (parseInt(quantity) < 0) {
             return res.status(400).json({ error: 'Le stock ne peut pas être négatif' });
         }
-        updates.stock = parseInt(stock);
+        updates.quantity = parseInt(quantity);
     }
     if (image_url !== undefined) updates.image_url = image_url?.trim();
-    if (categorie_id !== undefined) updates.categorie_id = categorie_id;
+    if (category_id !== undefined) updates.category_id = category_id;
 
     // Mettre à jour le produit
     const { data: updatedProduct, error } = await supabase
-        .from('produits')
+        .from('products')
         .update(updates)
         .eq('id', id)
         .select()
@@ -344,8 +344,8 @@ router.patch('/:id/toggle-status', authenticate, authorize('VENDEUR', 'ADMIN'), 
 
     // Récupérer le produit
     const { data: product } = await supabase
-        .from('produits')
-        .select('vendeur_id, is_active')
+        .from('products')
+        .select('seller_id, is_active')
         .eq('id', id)
         .single();
 
@@ -354,21 +354,21 @@ router.patch('/:id/toggle-status', authenticate, authorize('VENDEUR', 'ADMIN'), 
     }
 
     // Vérifier les permissions
-    if (req.user.role.nom !== 'ADMIN') {
-        const { data: vendeur } = await supabase
-            .from('vendeurs')
+    if (req.user.role.name !== 'ADMIN') {
+        const { data: seller } = await supabase
+            .from('sellers')
             .select('id')
             .eq('user_id', req.user.id)
             .single();
 
-        if (!vendeur || vendeur.id !== product.vendeur_id) {
+        if (!seller || seller.id !== product.seller_id) {
             return res.status(403).json({ error: 'Vous ne pouvez modifier que vos propres produits' });
         }
     }
 
     // Inverser is_active
     const { data: updatedProduct, error } = await supabase
-        .from('produits')
+        .from('products')
         .update({ is_active: !product.is_active })
         .eq('id', id)
         .select('is_active')
@@ -398,8 +398,8 @@ router.patch('/:id/stock', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHan
 
     // Récupérer le produit
     const { data: product } = await supabase
-        .from('produits')
-        .select('vendeur_id, stock')
+        .from('products')
+        .select('seller_id, quantity')
         .eq('id', id)
         .single();
 
@@ -408,14 +408,14 @@ router.patch('/:id/stock', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHan
     }
 
     // Vérifier les permissions
-    if (req.user.role.nom !== 'ADMIN') {
-        const { data: vendeur } = await supabase
-            .from('vendeurs')
+    if (req.user.role.name !== 'ADMIN') {
+        const { data: seller } = await supabase
+            .from('sellers')
             .select('id')
             .eq('user_id', req.user.id)
             .single();
 
-        if (!vendeur || vendeur.id !== product.vendeur_id) {
+        if (!seller || seller.id !== product.seller_id) {
             return res.status(403).json({ error: 'Vous ne pouvez modifier que vos propres produits' });
         }
     }
@@ -443,10 +443,10 @@ router.patch('/:id/stock', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHan
 
     // Mettre à jour le stock
     const { data: updatedProduct, error } = await supabase
-        .from('produits')
-        .update({ stock: newStock })
+        .from('products')
+        .update({ quantity: newStock })
         .eq('id', id)
-        .select('stock')
+        .select('quantity')
         .single();
 
     if (error) throw error;
@@ -463,8 +463,8 @@ router.delete('/:id', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHandler(
 
     // Récupérer le produit
     const { data: product } = await supabase
-        .from('produits')
-        .select('vendeur_id')
+        .from('products')
+        .select('seller_id')
         .eq('id', id)
         .single();
 
@@ -473,14 +473,14 @@ router.delete('/:id', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHandler(
     }
 
     // Vérifier les permissions
-    if (req.user.role.nom !== 'ADMIN') {
-        const { data: vendeur } = await supabase
-            .from('vendeurs')
+    if (req.user.role.name !== 'ADMIN') {
+        const { data: seller } = await supabase
+            .from('sellers')
             .select('id')
             .eq('user_id', req.user.id)
             .single();
 
-        if (!vendeur || vendeur.id !== product.vendeur_id) {
+        if (!seller || seller.id !== product.seller_id) {
             return res.status(403).json({ error: 'Vous ne pouvez supprimer que vos propres produits' });
         }
     }
@@ -503,7 +503,7 @@ router.get('/:id/comments', asyncHandler(async (req, res) => {
 
     // Vérifier que le produit existe
     const { data: product } = await supabase
-        .from('produits')
+        .from('products')
         .select('id')
         .eq('id', id)
         .single();
@@ -518,12 +518,12 @@ router.get('/:id/comments', asyncHandler(async (req, res) => {
         .from('commentaires')
         .select(`
             id,
-            note,
-            commentaire,
+            rate,
+            comment,
             created_at,
-            user:users(nom, prenom)
+            user:users(last_name, first_name)
         `, { count: 'exact' })
-        .eq('produit_id', id)
+        .eq('product_id', id)
         .eq('is_approved', true)
         .order(sort_by, { ascending: false })
         .range(offset, offset + parseInt(limit) - 1);
@@ -547,8 +547,8 @@ router.get('/:id/related', asyncHandler(async (req, res) => {
 
     // Récupérer le produit pour connaître sa catégorie et son prix
     const { data: product } = await supabase
-        .from('produits')
-        .select('categorie_id, prix, vendeur_id')
+        .from('products')
+        .select('category_id, price, seller_id')
         .eq('id', id)
         .single();
 
@@ -567,17 +567,17 @@ router.get('/:id/related', asyncHandler(async (req, res) => {
         .from('produits')
         .select(`
             id,
-            nom,
-            prix,
+            name,
+            price,
             image_url,
-            categorie:categories(nom),
-            vendeur:vendeurs(nom_boutique)
+            category:categories(name),
+            seller:sellers(name)
         `)
-        .eq('categorie_id', product.categorie_id)
+        .eq('category_id', product.category_id)
         .eq('is_active', true)
         .neq('id', id)
-        .gte('prix', priceMin)
-        .lte('prix', priceMax)
+        .gte('price', priceMin)
+        .lte('price', priceMax)
         .limit(8);
 
     res.status(200).json({

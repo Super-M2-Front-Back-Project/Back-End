@@ -46,7 +46,7 @@ router.get('/:id', authenticate, asyncHandler(async (req, res) => {
     const { id } = req.params;
 
     // Vérifier les permissions (ADMIN ou utilisateur lui-même)
-    if (req.user.role.nom !== 'ADMIN' && req.user.id !== id) {
+    if (req.user.role.name !== 'ADMIN' && req.user.id !== id) {
         return res.status(403).json({ error: 'Accès refusé' });
     }
 
@@ -60,15 +60,14 @@ router.get('/:id', authenticate, asyncHandler(async (req, res) => {
 // PUT /api/clients/:id - Mise à jour des informations d'un utilisateur
 router.put('/:id', authenticate, asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { nom, prenom, email, telephone, rue, code_postal, ville, date_naissance } = req.body;
+    const { lastname, firstname, email, phone, street, postal_code, city, birthdate } = req.body;
 
     // Vérifier les permissions (utilisateur lui-même ou ADMIN)
-    if (req.user.role.nom !== 'ADMIN' && req.user.id !== id) {
+    if (req.user.role.name !== 'ADMIN' && req.user.id !== id) {
         return res.status(403).json({ error: 'Accès refusé' });
     }
 
-    const client = await clientsPutController(id, nom, prenom, email, telephone, rue, code_postal, ville, date_naissance);
-
+    const client = await clientsPutController(id, lastname, firstname, email, phone, street, postal_code, city, birthdate);
     res.status(200).json({
         message: 'Profil mis à jour avec succès',
         client
@@ -78,14 +77,13 @@ router.put('/:id', authenticate, asyncHandler(async (req, res) => {
 // PATCH /api/clients/:id/change-role - Modifier le rôle d'un utilisateur (ADMIN)
 router.patch('/:id/change-role', authenticate, authorize('ADMIN'), asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { role_nom } = req.body;
+    const { role_name } = req.body;
 
-    if (!role_nom) {
+    if (!role_name) {
         return res.status(400).json({ error: 'Nom du rôle requis (CLIENT, VENDEUR, ADMIN)' });
     }
 
-    const client = await clientsPatchController(id, role_nom);
-
+    const client = await clientsPatchController(id, role_name);
     res.status(200).json({
         message: 'Rôle mis à jour avec succès',
         client
@@ -97,7 +95,7 @@ router.delete('/:id', authenticate, asyncHandler(async (req, res) => {
     const { id } = req.params;
 
     // Vérifier les permissions (utilisateur lui-même ou ADMIN)
-    if (req.user.role.nom !== 'ADMIN' && req.user.id !== id) {
+    if (req.user.role.name !== 'ADMIN' && req.user.id !== id) {
         return res.status(403).json({ error: 'Accès refusé' });
     }
 

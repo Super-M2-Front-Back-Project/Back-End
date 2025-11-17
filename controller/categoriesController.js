@@ -8,7 +8,7 @@ const categoriesGetController = async (sort_by, order) => {
         // Récupérer toutes les catégories
         const { data: categories, error } = await supabase
             .from('categories')
-            .select('id, nom, description, created_at')
+            .select('id, name, description, created_at')
             .order(sort_by, { ascending: order === 'asc' });
         
         if (error) {
@@ -39,7 +39,7 @@ const categoriesGetByIdController = async (id) => {
     try {
         const { data: category, error } = await supabase
             .from('categories')
-            .select('id, nom, description, created_at')
+            .select('id, name, description, created_at')
             .eq('id', id)
             .single();
 
@@ -72,12 +72,12 @@ const categoriesGetByIdController = async (id) => {
     }
 };
 
-const categoriesPostController = async (nom, description) => {
+const categoriesPostController = async (name, description) => {
     try {
         const { data: existing } = await supabase
             .from('categories')
             .select('id')
-            .eq('nom', nom)
+            .eq('name', name)
             .single();
 
         if (existing) {
@@ -277,5 +277,6 @@ module.exports = {
     categoriesGetByIdController,
     categoriesPostController,
     categoriesPutController,
-    categoriesDeleteController
+    categoriesDeleteController,
+    categoriesGetProductsController
 };

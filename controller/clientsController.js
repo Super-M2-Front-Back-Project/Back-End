@@ -11,14 +11,14 @@ const clientsGetController = async (role, search, page, limit, sort_by, order) =
             .select(`
                 id,
                 email,
-                nom,
-                prenom,
-                telephone,
-                rue,
-                code_postal,
-                ville,
+                last_name,
+                first_name,
+                phone,
+                street,
+                postal_code,
+                city,
                 created_at,
-                role:roles(id, nom)
+                role:roles(id, name)
             `, { count: 'exact' });
 
         // Filtre par rôle
@@ -26,7 +26,7 @@ const clientsGetController = async (role, search, page, limit, sort_by, order) =
             const { data: roleData } = await supabase
                 .from('roles')
                 .select('id')
-                .eq('nom', role.toUpperCase())
+                .eq('name', role.toUpperCase())
                 .single();
 
             if (roleData) {
@@ -36,7 +36,7 @@ const clientsGetController = async (role, search, page, limit, sort_by, order) =
 
         // Recherche par nom, prénom ou email
         if (search) {
-            query = query.or(`nom.ilike.%${search}%,prenom.ilike.%${search}%,email.ilike.%${search}%`);
+            query = query.or(`last_name.ilike.%${search}%,first_name.ilike.%${search}%,email.ilike.%${search}%`);
         }
 
         // Tri et pagination
@@ -71,15 +71,15 @@ const clientsGetByIdController = async (id) => {
             .select(`
                 id,
                 email,
-                nom,
-                prenom,
-                date_naissance,
-                rue,
-                code_postal,
-                ville,
-                telephone,
+                last_name,
+                first_name,
+                birthdate,
+                street,
+                postal_code,
+                city,
+                phone,
                 created_at,
-                role:roles(id, nom)
+                role:roles(id, name)
             `)
             .eq('id', id)
             .single();
@@ -89,10 +89,10 @@ const clientsGetByIdController = async (id) => {
         }
 
         // Si l'utilisateur est VENDEUR, inclure le profil vendeur
-        if (user.role.nom === 'VENDEUR') {
+        if (user.role.name === 'VENDEUR') {
             const { data: vendeur } = await supabase
-                .from('vendeurs')
-                .select('id, nom_boutique, description, siret, is_verified')
+                .from('sellers')
+                .select('id, name, description, siret, is_verified')
                 .eq('user_id', id)
                 .single();
 
@@ -106,7 +106,7 @@ const clientsGetByIdController = async (id) => {
     }
 };
 
-const clientsPutController = async (id, nom, prenom, email, telephone, rue, code_postal, ville, date_naissance) => {
+const clientsPutController = async (id, last_name, first_name, email, phone, street, postal_code, city, birthdate) => {
     try {
          // Vérifier que l'utilisateur existe
         const { data: existingUser } = await supabase
@@ -122,18 +122,18 @@ const clientsPutController = async (id, nom, prenom, email, telephone, rue, code
         // Construire l'objet de mise à jour
         const updates = {};
 
-        if (nom !== undefined) {
-            if (nom.trim().length === 0) {
-                return res.status(400).json({ error: 'Le nom ne peut pas être vide' });
+        if (last_name !== undefined) {
+            if (last_name.trim().length === 0) {
+                return res.status(400).json({ error: 'Le name ne peut pas être vide' });
             }
-            updates.nom = nom.trim();
+            updates.last_name = last_name.trim();
         }
 
-        if (prenom !== undefined) {
-            if (prenom.trim().length === 0) {
+        if (first_name !== undefined) {
+            if (first_name.trim().length === 0) {
                 return res.status(400).json({ error: 'Le prénom ne peut pas être vide' });
             }
-            updates.prenom = prenom.trim();
+            updates.first_name = first_name.trim();
         }
 
         if (email !== undefined) {
@@ -157,16 +157,16 @@ const clientsPutController = async (id, nom, prenom, email, telephone, rue, code
             updates.email = sanitizedEmail;
         }
 
-        if (telephone !== undefined) updates.telephone = telephone?.trim() || null;
-        if (rue !== undefined) updates.rue = rue?.trim();
-        if (code_postal !== undefined) {
-            if (code_postal && !/^\d{5}$/.test(code_postal)) {
+        if (phone !== undefined) updates.phone = phone?.trim() || null;
+        if (street !== undefined) updates.street = street?.trim();
+        if (postal_code !== undefined) {
+            if (postal_code && !/^\d{5}$/.test(postal_code)) {
                 return res.status(400).json({ error: 'Code postal invalide (5 chiffres)' });
             }
-            updates.code_postal = code_postal?.trim();
+            updates.postal_code = postal_code?.trim();
         }
-        if (ville !== undefined) updates.ville = ville?.trim();
-        if (date_naissance !== undefined) updates.date_naissance = date_naissance;
+        if (city !== undefined) updates.city = city?.trim();
+        if (birthdate !== undefined) updates.birthdate = birthdate;
 
         // Mettre à jour l'utilisateur
         const { data: updatedUser, error } = await supabase
@@ -185,12 +185,12 @@ const clientsPutController = async (id, nom, prenom, email, telephone, rue, code
     }
 };
 
-const clientsPatchController = async (id, role_nom) => {
+const clientsPatchController = async (id, name) => {
     try {
         // Récupérer l'utilisateur
         const { data: user, error } = await supabase
             .from('users')
-            .select('id, role:roles(id, nom)')
+            .select('id, role:roles(id, name)')
             .eq('id', id)
             .single();
 
@@ -201,8 +201,8 @@ const clientsPatchController = async (id, role_nom) => {
         // Vérifier que le rôle est valide
         const { data: role } = await supabase
             .from('roles')
-            .select('id, nom')
-            .eq('nom', role_nom.toUpperCase())
+            .select('id, name')
+            .eq('name', name.toUpperCase())
             .single();
 
         if (!role) {
@@ -214,7 +214,7 @@ const clientsPatchController = async (id, role_nom) => {
             .from('users')
             .update({ role_id: role.id })
             .eq('id', id)
-            .select('id, email, nom, prenom, role:roles(id, nom)')
+            .select('id, email, last_name, first_name, role:roles(id, name)')
             .single();
 
         if (updateError) throw updateError;
@@ -326,12 +326,12 @@ const clientsGetCommentsController = async (id, page, limit) => {
                 commentaire,
                 is_approved,
                 created_at,
-                produit:produits(id, nom, image_url)
+                produit:produits(id, name, image_url)
             `, { count: 'exact' })
             .eq('user_id', id);
 
         // Si ce n'est pas l'utilisateur lui-même ni un ADMIN, filtrer seulement les approuvés
-        if (req.user.id !== id && req.user.role.nom !== 'ADMIN') {
+        if (req.user.id !== id && req.user.role.name !== 'ADMIN') {
             query = query.eq('is_approved', true);
         }
 
