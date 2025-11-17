@@ -110,7 +110,7 @@ router.get('/:id/orders', authenticate, asyncHandler(async (req, res) => {
     const { page = 1, limit = 20, status } = req.query;
 
     // Vérifier les permissions (utilisateur lui-même ou ADMIN)
-    if (req.user.role.nom !== 'ADMIN' && req.user.id !== id) {
+    if (req.user.role.name !== 'ADMIN' && req.user.id !== id) {
         return res.status(403).json({ error: 'Accès refusé' });
     }
 

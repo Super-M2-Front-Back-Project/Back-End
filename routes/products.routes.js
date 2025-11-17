@@ -6,7 +6,7 @@
  * - Recherche de produits
  * - Détails d'un produit
  * - Création/Modification/Suppression (VENDEUR/ADMIN)
- * - Gestion du stock
+ * - Gestion du quantity
  */
 
 const express = require('express');
@@ -223,9 +223,9 @@ router.post('/', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHandler(async
         return res.status(400).json({ error: 'Le prix ne peut pas être négatif' });
     }
 
-    // Validation du stock
-    if (parseInt(stock) < 0) {
-        return res.status(400).json({ error: 'Le stock ne peut pas être négatif' });
+    // Validation du quantity
+    if (parseInt(quantity) < 0) {
+        return res.status(400).json({ error: 'Le quantity ne peut pas être négatif' });
     }
 
     // Récupérer le vendeur_id de l'utilisateur connecté
@@ -315,7 +315,7 @@ router.put('/:id', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHandler(asy
     }
     if (quantity !== undefined) {
         if (parseInt(quantity) < 0) {
-            return res.status(400).json({ error: 'Le stock ne peut pas être négatif' });
+            return res.status(400).json({ error: 'Le quantity ne peut pas être négatif' });
         }
         updates.quantity = parseInt(quantity);
     }
@@ -382,18 +382,18 @@ router.patch('/:id/toggle-status', authenticate, authorize('VENDEUR', 'ADMIN'), 
     });
 }));
 
-// PATCH /api/products/:id/stock - Mettre à jour le stock d'un produit
-router.patch('/:id/stock', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHandler(async (req, res) => {
+// PATCH /api/products/:id/quantity - Mettre à jour le quantity d'un produit
+router.patch('/:id/quantity', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { stock, operation = 'set' } = req.body;
+    const { quantity, operation = 'set' } = req.body;
 
-    if (stock === undefined) {
-        return res.status(400).json({ error: 'Valeur de stock requise' });
+    if (quantity === undefined) {
+        return res.status(400).json({ error: 'Valeur de quantity requise' });
     }
 
-    const stockValue = parseInt(stock);
+    const stockValue = parseInt(quantity);
     if (isNaN(stockValue)) {
-        return res.status(400).json({ error: 'Valeur de stock invalide' });
+        return res.status(400).json({ error: 'Valeur de quantity invalide' });
     }
 
     // Récupérer le produit
@@ -420,28 +420,28 @@ router.patch('/:id/stock', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHan
         }
     }
 
-    // Calculer le nouveau stock selon l'opération
+    // Calculer le nouveau quantity selon l'opération
     let newStock;
     switch (operation) {
         case 'set':
             newStock = stockValue;
             break;
         case 'add':
-            newStock = product.stock + stockValue;
+            newStock = product.quantity + stockValue;
             break;
         case 'subtract':
-            newStock = product.stock - stockValue;
+            newStock = product.quantity - stockValue;
             break;
         default:
             return res.status(400).json({ error: 'Opération invalide (set, add, subtract)' });
     }
 
-    // Validation du stock final
+    // Validation du quantity final
     if (newStock < 0) {
-        return res.status(400).json({ error: 'Le stock ne peut pas être négatif' });
+        return res.status(400).json({ error: 'Le quantity ne peut pas être négatif' });
     }
 
-    // Mettre à jour le stock
+    // Mettre à jour le quantity
     const { data: updatedProduct, error } = await supabase
         .from('products')
         .update({ quantity: newStock })
@@ -452,8 +452,8 @@ router.patch('/:id/stock', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHan
     if (error) throw error;
 
     res.status(200).json({
-        message: 'Stock mis à jour',
-        stock: updatedProduct.stock
+        message: 'Quantity mis à jour',
+        quantity: updatedProduct.quantity
     });
 }));
 
