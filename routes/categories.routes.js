@@ -52,9 +52,9 @@ router.post('/', authenticate, authorize('ADMIN'), asyncHandler(async (req, res)
         return res.status(400).json({ error: 'Le name de la catégorie est requis' });
     }
 
-    const sanitizedname = name.trim();
+    const sanitizedName = name.trim();
 
-    const category = await categoriesPostController(sanitizedname, description);
+    const category = await categoriesPostController(sanitizedName, description);
 
     res.status(201).json({
         message: 'Catégorie créée avec succès',
