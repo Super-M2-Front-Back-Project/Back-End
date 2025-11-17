@@ -59,9 +59,9 @@ router.post("/webhooks/stripe", express.raw({ type: "application/json" }), async
 
         if (orderId) {
           const { error } = await supabase
-            .from("commandes")
+            .from("orders")
             .update({
-              statut: "payée",
+              status: "payée",
               stripe_payment_id: paymentIntent.id,
               updated_at: new Date().toISOString(),
             })

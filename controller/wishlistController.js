@@ -10,10 +10,10 @@ const getWishlist = async (user_id) => {
             .select(`
                 id,
                 added_at,
-                produit:produits(
+                product:products(
                     id,
-                    nom,
-                    prix,
+                    name,
+                    price,
                     image_url
                 )
             `)
@@ -29,9 +29,9 @@ const getWishlist = async (user_id) => {
 const postWishlist = async (user_id, item_id) => {
     try {
         const { data: item_exists } = await supabase
-            .from('produits')
+            .from('wishlist')
             .select('id')
-            .eq('produit_id', item_id)
+            .eq('product_id', item_id)
             .eq('user_id', user_id)
             .single();
 
@@ -41,7 +41,7 @@ const postWishlist = async (user_id, item_id) => {
 
         const { data: newWishlistItem } = await supabase
             .from('wishlist')
-            .insert({ user_id, produit_id: item_id })
+            .insert({ user_id, product_id: item_id })
             .single()
             .select();
 
@@ -57,7 +57,7 @@ const deleteWishlistItem = async (item_id, user_id) => {
         const { data: deletedItem } = await supabase
             .from('wishlist')
             .delete()
-            .eq('produit_id', item_id)
+            .eq('product_id', item_id)
             .eq('user_id', user_id)
             .single()
             .select();

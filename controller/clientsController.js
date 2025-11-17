@@ -3,172 +3,144 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const clientsGetController = async (role, search, page, limit, sort_by, order) => {
+const clientsGetController = async (role, search, page = 1, limit = 20, sort_by = 'created_at', order = 'desc') => {
     try {
-        // Construction de la requête
         let query = supabase
             .from('users')
             .select(`
                 id,
                 email,
-                nom,
-                prenom,
-                telephone,
-                rue,
-                code_postal,
-                ville,
+                last_name,
+                first_name,
+                phone,
+                street,
+                postal_code,
+                city,
                 created_at,
-                role:roles(id, nom)
+                role:roles(id, name)
             `, { count: 'exact' });
 
-        // Filtre par rôle
         if (role) {
             const { data: roleData } = await supabase
                 .from('roles')
                 .select('id')
-                .eq('nom', role.toUpperCase())
+                .eq('name', role.toUpperCase())
                 .single();
-
-            if (roleData) {
-                query = query.eq('role_id', roleData.id);
-            }
+            if (roleData) query = query.eq('role_id', roleData.id);
         }
 
-        // Recherche par nom, prénom ou email
         if (search) {
-            query = query.or(`nom.ilike.%${search}%,prenom.ilike.%${search}%,email.ilike.%${search}%`);
+            query = query.or(`last_name.ilike.%${search}%,first_name.ilike.%${search}%,email.ilike.%${search}%`);
         }
 
-        // Tri et pagination
         query = query.order(sort_by, { ascending: order === 'asc' });
         const offset = (parseInt(page) - 1) * parseInt(limit);
         query = query.range(offset, offset + parseInt(limit) - 1);
 
         const { data: users, error, count } = await query;
-
         if (error) throw error;
 
         return {
-            clients: users,
+            clients: users || [],
             pagination: {
                 page: parseInt(page),
                 limit: parseInt(limit),
-                total: count,
-                pages: Math.ceil(count / parseInt(limit))
+                total: count || 0,
+                pages: Math.ceil((count || 0) / parseInt(limit))
             }
         };
     } catch (error) {
-        console.error('Erreur lors de la récupération des clients :', error);
+        console.error('Error fetching clients:', error);
         throw error;
     }
 };
 
 const clientsGetByIdController = async (id) => {
     try {
-        // Récupérer l'utilisateur
         const { data: user, error } = await supabase
             .from('users')
             .select(`
                 id,
                 email,
-                nom,
-                prenom,
-                date_naissance,
-                rue,
-                code_postal,
-                ville,
-                telephone,
+                last_name,
+                first_name,
+                birthdate,
+                street,
+                postal_code,
+                city,
+                phone,
                 created_at,
-                role:roles(id, nom)
+                role:roles(id, name)
             `)
             .eq('id', id)
             .single();
 
-        if (error || !user) {
-            return res.status(404).json({ error: 'Utilisateur non trouvé' });
-        }
+        if (error || !user) throw new Error('User not found');
 
-        // Si l'utilisateur est VENDEUR, inclure le profil vendeur
-        if (user.role.nom === 'VENDEUR') {
+        if (user.role?.name === 'VENDEUR') {
             const { data: vendeur } = await supabase
-                .from('vendeurs')
-                .select('id, nom_boutique, description, siret, is_verified')
+                .from('sellers')
+                .select('id, name, description, siret, is_verified')
                 .eq('user_id', id)
                 .single();
-
             user.vendeur = vendeur || null;
         }
 
         return user;
     } catch (error) {
-        console.error('Erreur lors de la récupération du client par ID :', error);
+        console.error('Error fetching client by ID:', error);
         throw error;
     }
 };
 
-const clientsPutController = async (id, nom, prenom, email, telephone, rue, code_postal, ville, date_naissance) => {
+const clientsPutController = async (id, fields) => {
     try {
-         // Vérifier que l'utilisateur existe
         const { data: existingUser } = await supabase
             .from('users')
             .select('id')
             .eq('id', id)
             .single();
 
-        if (!existingUser) {
-            return res.status(404).json({ error: 'Utilisateur non trouvé' });
-        }
+        if (!existingUser) throw new Error('User not found');
 
-        // Construire l'objet de mise à jour
         const updates = {};
 
-        if (nom !== undefined) {
-            if (nom.trim().length === 0) {
-                return res.status(400).json({ error: 'Le nom ne peut pas être vide' });
-            }
-            updates.nom = nom.trim();
+        if (fields.last_name !== undefined) {
+            const val = fields.last_name.trim();
+            if (!val) throw new Error('Last name cannot be empty');
+            updates.last_name = val;
         }
 
-        if (prenom !== undefined) {
-            if (prenom.trim().length === 0) {
-                return res.status(400).json({ error: 'Le prénom ne peut pas être vide' });
-            }
-            updates.prenom = prenom.trim();
+        if (fields.first_name !== undefined) {
+            const val = fields.first_name.trim();
+            if (!val) throw new Error('First name cannot be empty');
+            updates.first_name = val;
         }
 
-        if (email !== undefined) {
-            const sanitizedEmail = email.trim().toLowerCase();
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sanitizedEmail)) {
-                return res.status(400).json({ error: 'Format email invalide' });
-            }
+        if (fields.email !== undefined) {
+            const email = fields.email.trim().toLowerCase();
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Invalid email format');
 
-            // Vérifier unicité de l'email
             const { data: duplicate } = await supabase
                 .from('users')
                 .select('id')
-                .eq('email', sanitizedEmail)
+                .eq('email', email)
                 .neq('id', id)
                 .single();
+            if (duplicate) throw new Error('Email already in use');
 
-            if (duplicate) {
-                return res.status(409).json({ error: 'Cet email est déjà utilisé' });
-            }
-            
-            updates.email = sanitizedEmail;
+            updates.email = email;
         }
 
-        if (telephone !== undefined) updates.telephone = telephone?.trim() || null;
-        if (rue !== undefined) updates.rue = rue?.trim();
-        if (code_postal !== undefined) {
-            if (code_postal && !/^\d{5}$/.test(code_postal)) {
-                return res.status(400).json({ error: 'Code postal invalide (5 chiffres)' });
-            }
-            updates.code_postal = code_postal?.trim();
+        if (fields.phone !== undefined) updates.phone = fields.phone?.trim() || null;
+        if (fields.street !== undefined) updates.street = fields.street?.trim();
+        if (fields.postal_code !== undefined) {
+            if (fields.postal_code && !/^\d{5}$/.test(fields.postal_code)) throw new Error('Invalid postal code');
+            updates.postal_code = fields.postal_code?.trim();
         }
-        if (ville !== undefined) updates.ville = ville?.trim();
-        if (date_naissance !== undefined) updates.date_naissance = date_naissance;
+        if (fields.city !== undefined) updates.city = fields.city?.trim();
+        if (fields.birthdate !== undefined) updates.birthdate = fields.birthdate;
 
-        // Mettre à jour l'utilisateur
         const { data: updatedUser, error } = await supabase
             .from('users')
             .update(updates)
@@ -177,184 +149,127 @@ const clientsPutController = async (id, nom, prenom, email, telephone, rue, code
             .single();
 
         if (error) throw error;
-
         return updatedUser;
     } catch (error) {
-        console.error('Erreur lors de la mise à jour du client :', error);
+        console.error('Error updating client:', error);
         throw error;
     }
 };
 
-const clientsPatchController = async (id, role_nom) => {
+const clientsPatchController = async (id, roleName) => {
     try {
-        // Récupérer l'utilisateur
-        const { data: user, error } = await supabase
+        const { data: user } = await supabase
             .from('users')
-            .select('id, role:roles(id, nom)')
+            .select('id')
             .eq('id', id)
             .single();
+        if (!user) throw new Error('User not found');
 
-        if (error || !user) {
-            return res.status(404).json({ error: 'Utilisateur non trouvé' });
-        }
-
-        // Vérifier que le rôle est valide
         const { data: role } = await supabase
             .from('roles')
-            .select('id, nom')
-            .eq('nom', role_nom.toUpperCase())
+            .select('id, name')
+            .eq('name', roleName.toUpperCase())
             .single();
 
-        if (!role) {
-            return res.status(400).json({ error: 'Rôle invalide' });
-        }
+        if (!role) throw new Error('Invalid role');
 
-        // Mettre à jour le rôle de l'utilisateur
-        const { data: updatedUser, error: updateError } = await supabase
+        const { data: updatedUser, error } = await supabase
             .from('users')
             .update({ role_id: role.id })
             .eq('id', id)
-            .select('id, email, nom, prenom, role:roles(id, nom)')
+            .select('id, email, last_name, first_name, role:roles(id, name)')
             .single();
 
-        if (updateError) throw updateError;
-
+        if (error) throw error;
         return updatedUser;
     } catch (error) {
-        console.error('Erreur lors de la mise à jour du rôle du client :', error);
+        console.error('Error updating client role:', error);
         throw error;
     }
 };
 
 const clientsDeleteController = async (id) => {
     try {
-        // Vérifier que l'utilisateur existe
         const { data: user } = await supabase
             .from('users')
             .select('id')
             .eq('id', id)
             .single();
+        if (!user) throw new Error('User not found');
 
-        if (!user) {
-            return res.status(404).json({ error: 'Utilisateur non trouvé' });
-        }
-
-        // Vérifier les commandes en cours
         const { data: pendingOrders } = await supabase
             .from('commandes')
             .select('id')
             .eq('user_id', id)
-            .in('statut', ['EN_ATTENTE', 'EN_PREPARATION', 'EXPEDIE']);
+            .in('status', ['EN_ATTENTE', 'EN_PREPARATION', 'EXPEDIE']);
 
-        if (pendingOrders && pendingOrders.length > 0) {
-            return res.status(400).json({
-                error: 'Impossible de supprimer ce compte car il a des commandes en cours',
-                pending_orders: pendingOrders.length
-            });
-        }
+        if (pendingOrders?.length > 0) throw new Error('Cannot delete user with pending orders');
 
-        // Supprimer l'utilisateur de Supabase Auth (cascade supprimera aussi de la table users)
-        if (supabaseAdmin) {
-            const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id);
-            if (authError) throw authError;
-        } else {
-            // Fallback: supprimer juste de la table users
-            const { error } = await supabase
-                .from('users')
-                .delete()
-                .eq('id', id);
+        const { error } = await supabase
+            .from('users')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
 
-            if (error) throw error;
-        }
+        return { message: 'User deleted successfully' };
     } catch (error) {
-        console.error('Erreur lors de la suppression du client :', error);
+        console.error('Error deleting client:', error);
         throw error;
     }
 };
 
-const clientsGetCommandsController = async (id, page, limit, status) => {
+const clientsGetCommandsController = async (id, page = 1, limit = 20, status) => {
     try {
-        // Construction de la requête
         let query = supabase
             .from('commandes')
-            .select(`
-                id,
-                date_commande,
-                statut,
-                total,
-                adresse_livraison,
-                created_at
-            `, { count: 'exact' })
+            .select('id, command_date, status, total, address, created_at', { count: 'exact' })
             .eq('user_id', id);
 
-        // Filtre par statut
-        if (status) {
-            query = query.eq('statut', status);
-        }
+        if (status) query = query.eq('status', status);
 
-        query = query.order('date_commande', { ascending: false });
+        query = query.order('command_date', { ascending: false });
 
-        const offset = (parseInt(page) - 1) * parseInt(limit);
-        query = query.range(offset, offset + parseInt(limit) - 1);
+        const offset = (page - 1) * limit;
+        query = query.range(offset, offset + limit - 1);
 
         const { data: orders, error, count } = await query;
-
         if (error) throw error;
 
         return {
             orders: orders || [],
-            pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total: count || 0,
-                pages: Math.ceil((count || 0) / parseInt(limit))
-            }
+            pagination: { page, limit, total: count || 0, pages: Math.ceil((count || 0) / limit) }
         };
     } catch (error) {
-        console.error('Erreur lors de la récupération des commandes du client :', error);
+        console.error('Error fetching client orders:', error);
         throw error;
     }
 };
 
-const clientsGetCommentsController = async (id, page, limit) => {
+const clientsGetCommentsController = async (id, page = 1, limit = 20, currentUserRole = 'ADMIN', currentUserId) => {
     try {
         let query = supabase
             .from('commentaires')
-            .select(`
-                id,
-                note,
-                commentaire,
-                is_approved,
-                created_at,
-                produit:produits(id, nom, image_url)
-            `, { count: 'exact' })
+            .select('id, rate, comment, is_approved, created_at, product:products(id, name, image_url)', { count: 'exact' })
             .eq('user_id', id);
 
-        // Si ce n'est pas l'utilisateur lui-même ni un ADMIN, filtrer seulement les approuvés
-        if (req.user.id !== id && req.user.role.nom !== 'ADMIN') {
+        // Filtrer seulement les approuvés si ce n'est pas l'utilisateur lui-même ni un admin
+        if (currentUserId !== id && currentUserRole !== 'ADMIN') {
             query = query.eq('is_approved', true);
         }
 
         query = query.order('created_at', { ascending: false });
-
-        const offset = (parseInt(page) - 1) * parseInt(limit);
-        query = query.range(offset, offset + parseInt(limit) - 1);
+        const offset = (page - 1) * limit;
+        query = query.range(offset, offset + limit - 1);
 
         const { data: comments, error, count } = await query;
-
         if (error) throw error;
 
         return {
             comments: comments || [],
-            pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total: count || 0,
-                pages: Math.ceil((count || 0) / parseInt(limit))
-            }
+            pagination: { page, limit, total: count || 0, pages: Math.ceil((count || 0) / limit) }
         };
     } catch (error) {
-        console.error('Erreur lors de la récupération des commentaires du client :', error);
+        console.error('Error fetching client comments:', error);
         throw error;
     }
 };

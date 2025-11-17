@@ -16,44 +16,44 @@ const postOrder = async (user_id) => {
             throw new Error('Utilisateur non trouvé');
         }   
 
-        // Récupérer le panier de l'utilisateur
-        const { data: panier } = await supabase
-            .from('panier')
+        // Récupérer le cart de l'utilisateur
+        const { data: cart } = await supabase
+            .from('cart')
             .select('id')
             .eq('user_id', user_id)
             .single();
 
-        if (!panier) {
-            throw new Error('Panier non trouvé pour cet utilisateur');
+        if (!cart) {
+            throw new Error('Cart non trouvé pour cet utilisateur');
         }
 
-        // Récupérer les articles du panier
+        // Récupérer les articles du cart
         const { data: items } = await supabase
-            .from('items_panier')
-            .select('produit_id, quantite')
-            .eq('panier_id', panier.id);
+            .from('items_cart')
+            .select('product_id, quantity')
+            .eq('cart_id', cart.id);
 
         if (!items || items.length === 0) {
-            throw new Error('Le panier est vide');
+            throw new Error('Le cart est vide');
         }
 
         // Calculer le total de la commande
         let total = 0;
         for (const item of items) {
-            const { data: produit } = await supabase
-                .from('produits')
-                .select('prix')
-                .eq('id', item.produit_id)
+            const { data: product } = await supabase
+                .from('products')
+                .select('price')
+                .eq('id', item.product_id)
                 .single();
 
-            if (produit) {
-                total += produit.prix * item.quantite;
+            if (product) {
+                total += product.price * item.quantity;
             }
         }
 
         // Créer la commande
         const { data: newOrder} = await supabase
-            .from('commandes')
+            .from('orders')
             .insert({ user_id: user_id, total: total })
             .select()
             .single();
@@ -65,15 +65,15 @@ const postOrder = async (user_id) => {
         //ajouter les articles à la commande
         for (const item of items) {
             await supabase
-                .from('items_commande')
-                .insert({ commande_id: newOrder.id, produit_id: item.produit_id, quantite: item.quantite });
+                .from('items_order')
+                .insert({ order_id: newOrder.id, product_id: item.product_id, quantity: item.quantity });
         }
 
-        // Vider le panier
+        // Vider le cart
         await supabase
-            .from('items_panier')
+            .from('items_cart')
             .delete()
-            .eq('panier_id', panier.id);
+            .eq('cart_id', cart.id);
 
         return { message: 'Commande passée avec succès', order_id: newOrder.id };
     } catch (error) {
@@ -85,7 +85,7 @@ const postOrder = async (user_id) => {
 const getOrder = async () => {
     try {
         const { data: orders } = await supabase
-            .from('commandes')
+            .from('orders')
             .select('*');
         return orders;
     } catch (error) {
@@ -101,17 +101,17 @@ const getOrderById = async (order_id) => {
 
     try {
         const { data: order, error } = await supabase
-            .from('commandes')
+            .from('orders')
             .select(`
                 id,
                 user_id,
                 total,
-                statut,
-                items_commande (
+                status,
+                items_order (
                     id,
-                    produit_id,
-                    quantite,
-                    produits (
+                    product_id,
+                    quantity,
+                    products (
                         *
                     )
                 )
@@ -135,11 +135,11 @@ const getOrderById = async (order_id) => {
 };
 
 
-const updateOrderStatus = async (order_id, statut) => {
+const updateOrderStatus = async (order_id, status) => {
     try {
         const { data: updatedOrder } = await supabase
-            .from('commandes')
-            .update({ statut: statut })
+            .from('orders')
+            .update({ status: status })
             .eq('id', order_id)
             .select()
             .single();
@@ -158,7 +158,7 @@ const updateOrderStatus = async (order_id, statut) => {
 const deleteOrder = async (order_id) => {
     try {
         const { data: deletedOrder } = await supabase
-            .from('commandes')
+            .from('orders')
             .delete()
             .eq('id', order_id)
             .select()
@@ -177,8 +177,8 @@ const deleteOrder = async (order_id) => {
 const getOrderByUser = async (user_id) => {
     try {
         const { data: orders } = await supabase
-            .from('commandes')
-            .select('id, user_id, total, statut')
+            .from('orders')
+            .select('id, user_id, total, status')
             .eq('user_id', user_id);
         return orders;
     } catch (error) {

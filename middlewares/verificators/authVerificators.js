@@ -49,7 +49,9 @@ const validateRegister = [
         .notEmpty()
         .withMessage("Le code postal est requis")
         .isString()
-        .withMessage("Le code postal doit être une chaîne de caractères"),
+        .withMessage("Le code postal doit être une chaîne de caractères")
+        .isLength({ min: 5, max: 5 })
+        .withMessage("Le code postal doit contenir exactement 5 caractères"),
     body("city")
         .notEmpty()
         .withMessage("La ville est requise")
@@ -89,6 +91,8 @@ const validateResetPassword = [
         .isLength({ min: 6 })
         .withMessage("Le mot de passe doit contenir au moins 6 caractères"),
 ];
+
+
 
 module.exports = {
     validateRegister,
