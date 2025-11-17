@@ -61,13 +61,13 @@ router.get('/get/user_id', validateGetOrderByUser, validate, async (req, res) =>
 router.put('/update/:order_id', validateUpdateOrderStatus, validate, async (req, res) => {
     try {
         const { order_id } = req.params;
-        const { statut } = req.body;
+        const { status } = req.body;
 
-        if (!order_id || !statut) {
-            return res.status(400).json({ error: 'un ID de commande et un statut sont requis' });
+        if (!order_id || !status) {
+            return res.status(400).json({ error: 'un ID de commande et un status sont requis' });
         }
 
-        const result = await updateOrderStatus(order_id, statut);
+        const result = await updateOrderStatus(order_id, status);
         res.json(result);
     } catch (error) {
         console.error('Erreur lors de la mise à jour de la commande:', error);

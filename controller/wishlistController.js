@@ -29,7 +29,7 @@ const getWishlist = async (user_id) => {
 const postWishlist = async (user_id, item_id) => {
     try {
         const { data: item_exists } = await supabase
-            .from('products')
+            .from('wishlist')
             .select('id')
             .eq('product_id', item_id)
             .eq('user_id', user_id)

@@ -32,7 +32,7 @@ const createPaymentIntent = async (order_id) => {
       .single();
 
     if (error || !order) {
-      return res.status(404).json({ error: "Commande introuvable" });
+      throw new Error("Commande introuvable");
     }
 
     // Calcul du total à payer (en centimes)

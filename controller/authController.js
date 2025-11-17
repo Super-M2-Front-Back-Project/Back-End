@@ -9,7 +9,7 @@ const registerUser = async (email, password, last_name, first_name, birthdate, s
         const { data: role, error: roleError } = await supabase
         .from('roles')
         .select('id')
-        .eq('last_name', 'CLIENT')
+        .eq('name', 'CLIENT')
         .single();
 
         if (roleError || !role) {
@@ -35,7 +35,7 @@ const registerUser = async (email, password, last_name, first_name, birthdate, s
             postal_code: postal_code,
             city: city,
             phone: phone?.trim() || null,
-            adresse: `${street}, ${postal_code}, ${city}`,
+            address: `${street}, ${postal_code}, ${city}`,
             role_id: role.id
         });
 
@@ -55,7 +55,7 @@ const loginUser = async (email, password) => {
 
         const { data: user, error: errorUser } = await supabase
             .from('users')
-            .select('id, email, last_name, first_name, adresse, role:roles(id, last_name)')
+            .select('id, email, last_name, first_name, address, role:roles(id, name)')
             .eq('id', data.user.id)
             .single();
 

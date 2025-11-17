@@ -27,7 +27,7 @@ router.get('/', asyncHandler(async (req, res) => {
 
     // Construction de la requête
     let query = supabase
-        .from('vendeurs')
+        .from('sellers')
         .select(`
             id,
             name,
@@ -207,11 +207,11 @@ router.post('/', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHandler(async
 // PUT /api/sellers/:id - Mise à jour du profil vendeur
 router.put('/:id', authenticate, asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { nom_boutique, description } = req.body;
+    const { name, description } = req.body;
 
     // Récupérer le vendeur
     const { data: seller } = await supabase
-        .from('vendeurs')
+        .from('sellers')
         .select('user_id')
         .eq('id', id)
         .single();
@@ -221,17 +221,17 @@ router.put('/:id', authenticate, asyncHandler(async (req, res) => {
     }
 
     // Vérifier les permissions (vendeur propriétaire ou ADMIN)
-    if (req.user.role.nom !== 'ADMIN' && seller.user_id !== req.user.id) {
+    if (req.user.role.name !== 'ADMIN' && seller.user_id !== req.user.id) {
         return res.status(403).json({ error: 'Vous ne pouvez modifier que votre propre profil' });
     }
 
     // Construire l'objet de mise à jour
     const updates = {};
-    if (nom_boutique !== undefined) {
-        if (nom_boutique.trim().length === 0) {
+    if (name !== undefined) {
+        if (name.trim().length === 0) {
             return res.status(400).json({ error: 'Le nom de la boutique ne peut pas être vide' });
         }
-        updates.nom_boutique = nom_boutique.trim();
+        updates.name = name.trim();
     }
     if (description !== undefined) {
         updates.description = description?.trim() || null;
@@ -239,7 +239,7 @@ router.put('/:id', authenticate, asyncHandler(async (req, res) => {
 
     // Mettre à jour le profil
     const { data: updatedSeller, error } = await supabase
-        .from('vendeurs')
+        .from('sellers')
         .update(updates)
         .eq('id', id)
         .select()
@@ -259,7 +259,7 @@ router.patch('/:id/verify', authenticate, authorize('ADMIN'), asyncHandler(async
 
     // Vérifier que le vendeur existe
     const { data: seller } = await supabase
-        .from('vendeurs')
+        .from('sellers')
         .select('id, is_verified')
         .eq('id', id)
         .single();
@@ -274,7 +274,7 @@ router.patch('/:id/verify', authenticate, authorize('ADMIN'), asyncHandler(async
 
     // Mettre is_verified = true
     const { data: updatedSeller, error } = await supabase
-        .from('vendeurs')
+        .from('sellers')
         .update({ is_verified: true })
         .eq('id', id)
         .select()
@@ -304,7 +304,7 @@ router.get('/:id/products', asyncHandler(async (req, res) => {
 
     // Vérifier que le vendeur existe
     const { data: seller } = await supabase
-        .from('vendeurs')
+        .from('sellers')
         .select('id')
         .eq('id', id)
         .single();
@@ -315,19 +315,19 @@ router.get('/:id/products', asyncHandler(async (req, res) => {
 
     // Construction de la requête
     let query = supabase
-        .from('produits')
+        .from('products')
         .select(`
             id,
-            nom,
+            name,
             description,
-            prix,
-            stock,
+            price,
+            quantity,
             image_url,
             is_active,
             created_at,
-            categorie:categories(id, nom)
+            category:categories(id, name)
         `, { count: 'exact' })
-        .eq('vendeur_id', id);
+        .eq('seller_id', id);
 
     // Filtre par statut actif
     if (active !== undefined) {
@@ -336,11 +336,11 @@ router.get('/:id/products', asyncHandler(async (req, res) => {
 
     // Filtre par catégorie
     if (category_id) {
-        query = query.eq('categorie_id', category_id);
+        query = query.eq('category_id', category_id);
     }
 
     // Tri et pagination
-    const validSortFields = ['prix', 'created_at', 'nom', 'stock'];
+    const validSortFields = ['price', 'created_at', 'name', 'quantity'];
     const sortField = validSortFields.includes(sort_by) ? sort_by : 'created_at';
     query = query.order(sortField, { ascending: order === 'asc' });
 
@@ -369,7 +369,7 @@ router.get('/:id/orders', authenticate, asyncHandler(async (req, res) => {
 
     // Vérifier que le vendeur existe
     const { data: seller } = await supabase
-        .from('vendeurs')
+        .from('sellers')
         .select('user_id')
         .eq('id', id)
         .single();
@@ -379,19 +379,19 @@ router.get('/:id/orders', authenticate, asyncHandler(async (req, res) => {
     }
 
     // Vérifier les permissions (vendeur propriétaire ou ADMIN)
-    if (req.user.role.nom !== 'ADMIN' && seller.user_id !== req.user.id) {
+    if (req.user.role.name !== 'ADMIN' && seller.user_id !== req.user.id) {
         return res.status(403).json({ error: 'Accès refusé' });
     }
 
     // Récupérer les commandes contenant les produits du vendeur
-    // Note: Cette requête nécessite de joindre items_commande avec produits
+    // Note: Cette requête nécessite de joindre order_items avec products
     const { data: orderItems } = await supabase
-        .from('items_commande')
+        .from('order_items')
         .select(`
-            commande_id,
-            produit:produits!inner(vendeur_id)
+            order_id,
+            product:products!inner(seller_id)
         `)
-        .eq('produit.vendeur_id', id);
+        .eq('product.seller_id', id);
 
     if (!orderItems || orderItems.length === 0) {
         return res.status(200).json({
@@ -401,27 +401,26 @@ router.get('/:id/orders', authenticate, asyncHandler(async (req, res) => {
     }
 
     // Extraire les IDs de commandes uniques
-    const orderIds = [...new Set(orderItems.map(item => item.commande_id))];
-
+    const orderIds = [...new Set(orderItems.map(item => item.order_id))];
     // Récupérer les détails des commandes
     let query = supabase
-        .from('commandes')
+        .from('orders')
         .select(`
             id,
-            date_commande,
-            statut,
+            order_date,
+            status,
             total,
-            adresse_livraison,
-            user:users(nom, prenom, email)
+            delivery_address,
+            user:users(first_name, last_name, email)
         `, { count: 'exact' })
         .in('id', orderIds);
 
     // Filtre par statut
     if (status) {
-        query = query.eq('statut', status);
+        query = query.eq('status', status);
     }
 
-    query = query.order('date_commande', { ascending: false });
+    query = query.order('order_date', { ascending: false });
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
     query = query.range(offset, offset + parseInt(limit) - 1);
@@ -447,7 +446,7 @@ router.delete('/:id', authenticate, authorize('ADMIN'), asyncHandler(async (req,
 
     // Vérifier que le vendeur existe
     const { data: seller } = await supabase
-        .from('vendeurs')
+        .from('sellers')
         .select('id')
         .eq('id', id)
         .single();
@@ -458,13 +457,13 @@ router.delete('/:id', authenticate, authorize('ADMIN'), asyncHandler(async (req,
 
     // Vérifier les commandes en cours
     const { data: orderItems } = await supabase
-        .from('items_commande')
+        .from('order_items')
         .select(`
-            commande:commandes!inner(statut),
-            produit:produits!inner(vendeur_id)
+            order:orders!inner(status),
+            product:products!inner(seller_id)
         `)
-        .eq('produit.vendeur_id', id)
-        .in('commande.statut', ['EN_ATTENTE', 'EN_PREPARATION', 'EXPEDIE']);
+        .eq('product.seller_id', id)
+        .in('order.status', ['EN_ATTENTE', 'EN_PREPARATION', 'EXPEDIE']);
 
     if (orderItems && orderItems.length > 0) {
         return res.status(400).json({
@@ -475,13 +474,13 @@ router.delete('/:id', authenticate, authorize('ADMIN'), asyncHandler(async (req,
 
     // Désactiver tous les produits du vendeur
     await supabase
-        .from('produits')
+        .from('products')
         .update({ is_active: false })
-        .eq('vendeur_id', id);
+        .eq('seller_id', id);
 
     // Supprimer le profil vendeur
     const { error } = await supabase
-        .from('vendeurs')
+        .from('sellers')
         .delete()
         .eq('id', id);
 
