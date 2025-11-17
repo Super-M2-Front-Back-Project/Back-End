@@ -3,34 +3,27 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const categoriesGetController = async (sort_by, order) => {
+const categoriesGetController = async (sort_by = 'created_at', order = 'desc') => {
     try {
-        // Récupérer toutes les catégories
         const { data: categories, error } = await supabase
             .from('categories')
-            .select('id, nom, description, created_at')
+            .select('id, name, description, created_at')
             .order(sort_by, { ascending: order === 'asc' });
-        
-        if (error) {
-            throw error;
-        }
 
-        // Ajouter le nombre de produits actifs par catégorie
+        if (error) throw error;
+
         const categoriesWithStats = await Promise.all(categories.map(async (category) => {
             const { count } = await supabase
-                .from('produits')
+                .from('products')
                 .select('*', { count: 'exact', head: true })
-                .eq('categorie_id', category.id)
+                .eq('category_id', category.id)
                 .eq('is_active', true);
-            return {
-                ...category,
-                total_products: count || 0
-            };
+            return { ...category, total_products: count || 0 };
         }));
 
         return categoriesWithStats;
     } catch (error) {
-        console.error('Erreur lors de la récupération des catégories:', error);
+        console.error('Error fetching categories:', error);
         throw error;
     }
 };
@@ -39,222 +32,183 @@ const categoriesGetByIdController = async (id) => {
     try {
         const { data: category, error } = await supabase
             .from('categories')
-            .select('id, nom, description, created_at')
+            .select('id, name, description, created_at')
             .eq('id', id)
             .single();
 
         if (error) throw error;
 
-        // Ajouter le nombre de produits actifs
         const { count: totalProducts } = await supabase
-            .from('produits')
+            .from('products')
             .select('*', { count: 'exact', head: true })
-            .eq('categorie_id', id)
+            .eq('category_id', id)
             .eq('is_active', true);
 
-        // Compter le nombre de vendeurs différents
-        const { data: vendeurs } = await supabase
-            .from('produits')
-            .select('vendeur_id')
-            .eq('categorie_id', id)
+        const { data: sellers } = await supabase
+            .from('products')
+            .select('seller_id')
+            .eq('category_id', id)
             .eq('is_active', true);
 
-        const uniqueVendors = vendeurs ? new Set(vendeurs.map(p => p.vendeur_id)).size : 0;
+        const uniqueVendors = sellers ? new Set(sellers.map(p => p.seller_id)).size : 0;
 
-        return {
-            ...category,
-            total_products: totalProducts || 0,
-            total_vendors: uniqueVendors
-        };
+        return { ...category, total_products: totalProducts || 0, total_vendors: uniqueVendors };
     } catch (error) {
-        console.error('Erreur lors de la récupération de la catégorie:', error);
+        console.error('Error fetching category by ID:', error);
         throw error;
     }
 };
 
-const categoriesPostController = async (nom, description) => {
+const categoriesPostController = async (name, description) => {
     try {
-        const { data: existing } = await supabase
+        if (!name || name.trim().length === 0) throw new Error('Category name cannot be empty');
+        const sanitizedName = name.trim();
+
+        const { data: existing, error: existingError } = await supabase
             .from('categories')
             .select('id')
-            .eq('nom', nom)
+            .eq('name', sanitizedName)
             .single();
 
-        if (existing) {
-            return res.status(409).json({ error: 'Une catégorie avec ce nom existe déjà' });
-        }
+        if (existingError && existingError.code !== 'PGRST116') throw existingError;
+        if (existing) throw new Error('A category with this name already exists');
 
         const { data: category, error } = await supabase
             .from('categories')
-            .insert({
-                nom: sanitizedNom,
-                description: description?.trim() || null
-            })
+            .insert({ name: sanitizedName, description: description?.trim() || null })
             .select()
             .single();
 
         if (error) throw error;
-
         return category;
     } catch (error) {
-        console.error('Erreur lors de la création de la catégorie:', error);
+        console.error('Error creating category:', error);
         throw error;
     }
 };
 
-const categoriesPutController = async (id, nom, description) => {
+const categoriesPutController = async (id, name, description) => {
     try {
-        // Vérifier que la catégorie existe
-        const { data: existing } = await supabase
+        const { data: existing, error: existingError } = await supabase
             .from('categories')
             .select('id')
             .eq('id', id)
             .single();
 
-        if (!existing) {
-            return res.status(404).json({ error: 'Catégorie non trouvée' });
-        }
+        if (existingError || !existing) throw new Error('Category not found');
 
-        // Construire l'objet de mise à jour
         const updates = {};
 
-        if (nom !== undefined) {
-            const sanitizedNom = nom.trim();
-            if (sanitizedNom.length === 0) {
-                return res.status(400).json({ error: 'Le nom ne peut pas être vide' });
-            }
+        if (name !== undefined) {
+            const sanitizedName = name.trim();
+            if (!sanitizedName) throw new Error('Category name cannot be empty');
 
-            // Vérifier l'unicité du nom si modifié
-            const { data: duplicate } = await supabase
+            const { data: duplicate, error: dupError } = await supabase
                 .from('categories')
                 .select('id')
-                .eq('nom', sanitizedNom)
+                .eq('name', sanitizedName)
                 .neq('id', id)
                 .single();
 
-            if (duplicate) {
-                return res.status(409).json({ error: 'Une catégorie avec ce nom existe déjà' });
-            }
+            if (dupError && dupError.code !== 'PGRST116') throw dupError;
+            if (duplicate) throw new Error('A category with this name already exists');
 
-            updates.nom = sanitizedNom;
+            updates.name = sanitizedName;
         }
 
-        if (description !== undefined) {
-            updates.description = description?.trim() || null;
-        }
+        if (description !== undefined) updates.description = description?.trim() || null;
 
-        // Mettre à jour la catégorie
-        const { data: category, error } = await supabase
+        const { data: category, error: updateError } = await supabase
             .from('categories')
             .update(updates)
             .eq('id', id)
             .select()
             .single();
 
-        if (error) throw error;
-
+        if (updateError) throw updateError;
         return category;
     } catch (error) {
-        console.error('Erreur lors de la mise à jour de la catégorie:', error);
+        console.error('Error updating category:', error);
         throw error;
     }
 };
 
 const categoriesDeleteController = async (id) => {
     try {
-        // Vérifier que la catégorie existe
-        const { data: existing } = await supabase
+        const { data: existing, error: existingError } = await supabase
             .from('categories')
             .select('id')
             .eq('id', id)
             .single();
 
-        if (!existing) {
-            return res.status(404).json({ error: 'Catégorie non trouvée' });
-        }
+        if (existingError || !existing) throw new Error('Category not found');
 
-        // Vérifier qu'il n'y a pas de produits liés
-        const { count } = await supabase
-            .from('produits')
+        const { count, error: countError } = await supabase
+            .from('products')
             .select('*', { count: 'exact', head: true })
-            .eq('categorie_id', id);
+            .eq('category_id', id);
 
-        if (count > 0) {
-            return res.status(400).json({
-                error: `Impossible de supprimer cette catégorie car ${count} produit(s) y sont liés`,
-                products_count: count
-            });
-        }
+        if (countError) throw countError;
+        if (count > 0) throw new Error(`Cannot delete category; ${count} product(s) are linked`);
 
-        // Supprimer la catégorie
-        const { error } = await supabase
+        const { error: deleteError } = await supabase
             .from('categories')
             .delete()
             .eq('id', id);
 
-        if (error) throw error;
-
-        return { message: 'Catégorie supprimée avec succès' };
+        if (deleteError) throw deleteError;
+        return { message: 'Category deleted successfully' };
     } catch (error) {
-        console.error('Erreur lors de la suppression de la catégorie:', error);
+        console.error('Error deleting category:', error);
         throw error;
     }
 };
 
 const categoriesGetProductsController = async (id, page = 1, limit = 20, sort_by = 'created_at', order = 'desc') => {
     try {
-        // Vérifier que la catégorie existe
-        const { data: category } = await supabase
+        const { data: category, error } = await supabase
             .from('categories')
             .select('id')
             .eq('id', id)
             .single();
 
-        if (!category) {
-            return res.status(404).json({ error: 'Catégorie non trouvée' });
-        }
+        if (error || !category) throw new Error('Category not found');
 
-        // Récupérer les produits de la catégorie
-        const validSortFields = ['prix', 'created_at', 'nom', 'stock'];
+        const validSortFields = ['price', 'created_at', 'name', 'stock'];
         const sortField = validSortFields.includes(sort_by) ? sort_by : 'created_at';
         const offset = (parseInt(page) - 1) * parseInt(limit);
 
-        const { data: products, error, count } = await supabase
-            .from('produits')
+        const { data: products, count, error: productsError } = await supabase
+            .from('products')
             .select(`
                 id,
-                nom,
+                name,
                 description,
-                prix,
+                price,
                 stock,
                 image_url,
                 created_at,
-                vendeur:vendeurs(id, nom_boutique)
+                seller:sellers(id, name)
             `, { count: 'exact' })
-            .eq('categorie_id', id)
+            .eq('category_id', id)
             .eq('is_active', true)
             .order(sortField, { ascending: order === 'asc' })
             .range(offset, offset + parseInt(limit) - 1);
 
-        if (error) throw error;
+        if (productsError) throw productsError;
 
-        // Calculer la note moyenne pour chaque produit
         const productsWithRatings = await Promise.all(products.map(async (product) => {
             const { data: comments } = await supabase
-                .from('commentaires')
-                .select('note')
-                .eq('produit_id', product.id)
+                .from('comments')
+                .select('rate')
+                .eq('product_id', product.id)
                 .eq('is_approved', true);
 
             const averageRating = comments && comments.length > 0
-                ? comments.reduce((sum, c) => sum + c.note, 0) / comments.length
+                ? comments.reduce((sum, c) => sum + c.rate, 0) / comments.length
                 : 0;
 
-            return {
-                ...product,
-                average_rating: Math.round(averageRating * 10) / 10,
-                total_comments: comments ? comments.length : 0
-            };
+            return { ...product, average_rating: Math.round(averageRating * 10) / 10, total_comments: comments?.length || 0 };
         }));
 
         return {
@@ -267,7 +221,7 @@ const categoriesGetProductsController = async (id, page = 1, limit = 20, sort_by
             }
         };
     } catch (error) {
-        console.error('Erreur lors de la récupération des produits de la catégorie:', error);
+        console.error('Error fetching products for category:', error);
         throw error;
     }
 };
@@ -277,5 +231,6 @@ module.exports = {
     categoriesGetByIdController,
     categoriesPostController,
     categoriesPutController,
-    categoriesDeleteController
+    categoriesDeleteController,
+    categoriesGetProductsController
 };

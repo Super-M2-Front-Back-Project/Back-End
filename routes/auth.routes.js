@@ -14,32 +14,30 @@ router.post('/register', asyncHandler(async (req, res) => {
     const {
         email,
         password,
-        nom,
-        prenom,
-        date_naissance,
-        rue,
-        code_postal,
-        ville,
-        telephone,
-        // Anciens champs pour rétrocompatibilité
-        adresse
+        last_name,
+        first_name,
+        birth_date,
+        street,
+        postal_code,
+        city,
+        phone,
     } = req.body;
 
     // Validation des champs obligatoires
-    if (!email || !password || !nom || !prenom || !date_naissance || !rue || !code_postal || !ville) {
+    if (!email || !password || !last_name || !first_name || !birth_date || !street || !postal_code || !city) {
         return res.status(400).json({
             error: 'Champs obligatoires manquants',
-            required: ['email', 'password', 'nom', 'prenom', 'date_naissance', 'rue', 'code_postal', 'ville']
+            required: ['email', 'password', 'last_name', 'first_name', 'birth_date', 'street', 'postal_code', 'city']
         });
     }
 
     // Sanitization
     const sanitizedEmail = email.trim().toLowerCase();
-    const sanitizedNom = nom.trim();
-    const sanitizedPrenom = prenom.trim();
-    const sanitizedRue = rue?.trim();
-    const sanitizedCodePostal = code_postal?.trim();
-    const sanitizedVille = ville?.trim();
+    const sanitizedLast_name = last_name.trim();
+    const sanitizedFirst_name = first_name.trim();
+    const sanitizedStreet = street?.trim();
+    const sanitizedCodePostal = postal_code?.trim();
+    const sanitizedCity = city?.trim();
 
     // Validation format email
     if (!EMAIL_REGEX.test(sanitizedEmail)) {
@@ -55,14 +53,14 @@ router.post('/register', asyncHandler(async (req, res) => {
 
     // Validation date de naissance (format YYYY-MM-DD)
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(date_naissance)) {
+    if (!dateRegex.test(birth_date)) {
         return res.status(400).json({
             error: 'Format de date invalide (attendu: YYYY-MM-DD)'
         });
     }
 
     // Vérifier que l'utilisateur a au moins 13 ans
-    const birthDate = new Date(date_naissance);
+    const birthDate = new Date(birth_date);
     const today = new Date();
     const age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
@@ -82,23 +80,22 @@ router.post('/register', asyncHandler(async (req, res) => {
     await registerUser(
         sanitizedEmail,
         password,
-        sanitizedNom,
-        sanitizedPrenom,
-        date_naissance,
-        sanitizedRue,
+        sanitizedLast_name,
+        sanitizedFirst_name,
+        birth_date,
+        sanitizedStreet,
         sanitizedCodePostal,
-        sanitizedVille,
-        telephone,
-        adresse
+        sanitizedCity,
+        phone
     );
 
     res.status(201).json({
         message: 'Inscription réussie',
         user: {
             email: sanitizedEmail,
-            nom: sanitizedNom,
-            prenom: sanitizedPrenom,
-            ville: sanitizedVille
+            last_name: sanitizedLast_name,
+            first_name: sanitizedFirst_name,
+            city: sanitizedCity
         }
     });
 }));
