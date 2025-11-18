@@ -1,13 +1,3 @@
-/**
- * Routes de gestion des catégories
- *
- * CRUD des catégories de produits
- * - Liste des catégories
- * - Détails d'une catégorie
- * - Création/Modification/Suppression (ADMIN)
- * - Produits par catégorie
- */
-
 const express = require('express');
 const { supabase } = require('../config/supabase');
 const { authenticate, authorize } = require('../middlewares/auth.middleware');
@@ -20,12 +10,14 @@ const {
     categoriesDeleteController,
     categoriesGetProductsController
 } = require('../controller/categoriesController');
+const validate = require('../middlewares/verificators/validate');
+const { validateGetCategory } = require('../middlewares/verificators/categoriesVerificators');
 
 const router = express.Router();
 
 // GET /api/categories - Liste toutes les catégories
-router.get('/', asyncHandler(async (req, res) => {
-    const { sort_by = 'name', order = 'asc' } = req.query;
+router.get('/', validateGetCategory, validate, asyncHandler(async (req, res) => {
+    const { sort_by = 'name', order = 'asc' } = req.body;
 
     const categories = await categoriesGetController(sort_by, order);
 

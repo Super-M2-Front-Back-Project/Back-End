@@ -8,10 +8,6 @@ const { validateRegister, validateLogin, validateForgotPassword, validateResetPa
 
 const router = express.Router();
 
-// Regex de validation
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PASSWORD_MIN_LENGTH = 8;
-
 router.post('/register', validateRegister, validate, asyncHandler(async (req, res) => {
     const {
         email,

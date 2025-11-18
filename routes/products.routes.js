@@ -161,7 +161,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
     // Récupérer le produit avec toutes les relations
     const { data: product, error } = await supabase
-        .from('produits')
+        .from('products')
         .select(`
             id,
             name,
@@ -181,6 +181,9 @@ router.get('/:id', asyncHandler(async (req, res) => {
         `)
         .eq('id', id)
         .single();
+
+        console.log(product);
+        
 
     if (error || !product) {
         return res.status(404).json({ error: 'Produit non trouvé' });
