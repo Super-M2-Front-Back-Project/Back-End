@@ -1,9 +1,9 @@
 /**
- * Routes de gestion des produits
+ * Routes de gestion des products
  *
- * CRUD et opérations sur les produits
- * - Liste des produits avec filtres
- * - Recherche de produits
+ * CRUD et opérations sur les products
+ * - Liste des products avec filtres
+ * - Recherche de products
  * - Détails d'un produit
  * - Création/Modification/Suppression (VENDEUR/ADMIN)
  * - Gestion du quantity
@@ -16,7 +16,7 @@ const asyncHandler = require('../utils/asyncHandler');
 
 const router = express.Router();
 
-// GET /api/products - Liste tous les produits avec filtres
+// GET /api/products - Liste tous les products avec filtres
 router.get('/', optionalAuth, asyncHandler(async (req, res) => {
     const {
         page = 1,
@@ -46,7 +46,7 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
             seller:sellers(id, name, user:users(first_name, last_name))
         `, { count: 'exact' });
 
-    // Filtrer les produits actifs uniquement (sauf pour ADMIN)
+    // Filtrer les products actifs uniquement (sauf pour ADMIN)
     if (!req.user || req.user.role?.name !== 'ADMIN') {
         query = query.eq('is_active', true);
     }
@@ -120,7 +120,7 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
     });
 }));
 
-// GET /api/products/search - Recherche avancée de produits
+// GET /api/products/search - Recherche avancée de products
 router.get('/search', asyncHandler(async (req, res) => {
     const { q } = req.query;
 
@@ -132,7 +132,7 @@ router.get('/search', asyncHandler(async (req, res) => {
 
     // Recherche full-text sur nom et description
     const { data: products, error } = await supabase
-        .from('produits')
+        .from('products')
         .select(`
             id,
             name,
@@ -161,7 +161,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
     // Récupérer le produit avec toutes les relations
     const { data: product, error } = await supabase
-        .from('produits')
+        .from('products')
         .select(`
             id,
             name,
@@ -182,9 +182,12 @@ router.get('/:id', asyncHandler(async (req, res) => {
         .eq('id', id)
         .single();
 
+    console.log("DATA :", product);
+
     if (error || !product) {
         return res.status(404).json({ error: 'Produit non trouvé' });
     }
+    
 
     // Calculer la note moyenne
     const { data: comments } = await supabase
@@ -299,7 +302,7 @@ router.put('/:id', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHandler(asy
             .single();
 
         if (!seller || seller.id !== product.seller_id) {
-            return res.status(403).json({ error: 'Vous ne pouvez modifier que vos propres produits' });
+            return res.status(403).json({ error: 'Vous ne pouvez modifier que vos propres products' });
         }
     }
 
@@ -362,7 +365,7 @@ router.patch('/:id/toggle-status', authenticate, authorize('VENDEUR', 'ADMIN'), 
             .single();
 
         if (!seller || seller.id !== product.seller_id) {
-            return res.status(403).json({ error: 'Vous ne pouvez modifier que vos propres produits' });
+            return res.status(403).json({ error: 'Vous ne pouvez modifier que vos propres products' });
         }
     }
 
@@ -416,7 +419,7 @@ router.patch('/:id/quantity', authenticate, authorize('VENDEUR', 'ADMIN'), async
             .single();
 
         if (!seller || seller.id !== product.seller_id) {
-            return res.status(403).json({ error: 'Vous ne pouvez modifier que vos propres produits' });
+            return res.status(403).json({ error: 'Vous ne pouvez modifier que vos propres products' });
         }
     }
 
@@ -481,13 +484,13 @@ router.delete('/:id', authenticate, authorize('VENDEUR', 'ADMIN'), asyncHandler(
             .single();
 
         if (!seller || seller.id !== product.seller_id) {
-            return res.status(403).json({ error: 'Vous ne pouvez supprimer que vos propres produits' });
+            return res.status(403).json({ error: 'Vous ne pouvez supprimer que vos propres products' });
         }
     }
 
     // Soft delete (désactiver plutôt que supprimer)
     const { error } = await supabase
-        .from('produits')
+        .from('products')
         .update({ is_active: false })
         .eq('id', id);
 
@@ -541,7 +544,7 @@ router.get('/:id/comments', asyncHandler(async (req, res) => {
     });
 }));
 
-// GET /api/products/:id/related - Produits similaires/recommandés
+// GET /api/products/:id/related - Products similaires/recommandés
 router.get('/:id/related', asyncHandler(async (req, res) => {
     const { id } = req.params;
 
@@ -556,7 +559,7 @@ router.get('/:id/related', asyncHandler(async (req, res) => {
         return res.status(404).json({ error: 'Produit non trouvé' });
     }
 
-    // Trouver des produits similaires
+    // Trouver des products similaires
     // 1. Même catégorie
     // 2. Prix similaire (±30%)
     // 3. Exclure le produit actuel
@@ -564,7 +567,7 @@ router.get('/:id/related', asyncHandler(async (req, res) => {
     const priceMax = product.prix * 1.3;
 
     const { data: relatedProducts } = await supabase
-        .from('produits')
+        .from('products')
         .select(`
             id,
             name,
