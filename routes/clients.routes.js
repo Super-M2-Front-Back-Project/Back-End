@@ -13,14 +13,15 @@ const express = require('express');
 const { supabase, supabaseAdmin } = require('../config/supabase');
 const { authenticate, authorize, checkOwnership } = require('../middlewares/auth.middleware');
 const asyncHandler = require('../utils/asyncHandler');
-const { 
-    clientsGetController, 
+const {
+    clientsGetController,
     clientsGetByIdController,
     clientsPutController,
     clientsPatchController,
     clientsDeleteController,
     clientsGetCommandsController,
-    clientsGetCommentsController
+    clientsGetCommentsController,
+    clientsRequestSellerUpgradeController
 } = require('../controller/clientsController');
 
 const router = express.Router();
@@ -131,6 +132,19 @@ router.get('/:id/comments', authenticate, asyncHandler(async (req, res) => {
     const result = await clientsGetCommentsController(req.user, id, page, limit);
 
     res.status(200).json(result);
+}));
+
+// POST /api/clients/me/request-seller-upgrade - Demande pour devenir vendeur (CLIENT uniquement)
+router.post('/me/request-seller-upgrade', authenticate, authorize('CLIENT'), asyncHandler(async (req, res) => {
+    const { shop_name, description, siret } = req.body;
+
+    const result = await clientsRequestSellerUpgradeController(req.user.id, {
+        shop_name,
+        description,
+        siret
+    });
+
+    res.status(201).json(result);
 }));
 
 module.exports = router;

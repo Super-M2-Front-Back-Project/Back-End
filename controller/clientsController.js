@@ -274,6 +274,78 @@ const clientsGetCommentsController = async (id, page = 1, limit = 20, currentUse
     }
 };
 
+const clientsRequestSellerUpgradeController = async (userId, shopData) => {
+    try {
+        const { shop_name, description, siret } = shopData;
+
+        if (!shop_name || shop_name.trim().length < 3) {
+            throw new Error('Le nom de la boutique doit contenir au moins 3 caractères');
+        }
+
+        if (!siret || !/^\d{14}$/.test(siret)) {
+            throw new Error('Le SIRET doit contenir exactement 14 chiffres');
+        }
+
+        const { data: user } = await supabase
+            .from('users')
+            .select('id, role:roles(id, name)')
+            .eq('id', userId)
+            .single();
+
+        if (!user) throw new Error('Utilisateur non trouvé');
+
+        if (user.role?.name === 'VENDEUR') {
+            throw new Error('Vous êtes déjà vendeur');
+        }
+
+        if (user.role?.name === 'ADMIN') {
+            throw new Error('Les administrateurs ne peuvent pas devenir vendeur');
+        }
+
+        const { data: vendeurRole } = await supabase
+            .from('roles')
+            .select('id')
+            .eq('name', 'VENDEUR')
+            .single();
+
+        if (!vendeurRole) throw new Error('Rôle vendeur non trouvé');
+
+        const { error: updateError } = await supabase
+            .from('users')
+            .update({ role_id: vendeurRole.id })
+            .eq('id', userId);
+
+        if (updateError) throw updateError;
+
+        const { data: seller, error: sellerError } = await supabase
+            .from('sellers')
+            .insert({
+                user_id: userId,
+                name: shop_name.trim(),
+                description: description?.trim() || null,
+                siret: siret.trim(),
+                is_verified: false
+            })
+            .select()
+            .single();
+
+        if (sellerError) throw sellerError;
+
+        return {
+            message: 'Demande envoyée avec succès. Votre compte sera vérifié par un administrateur.',
+            seller: {
+                id: seller.id,
+                shop_name: seller.name,
+                is_verified: seller.is_verified,
+                status: 'pending_verification'
+            }
+        };
+    } catch (error) {
+        console.error('Error requesting seller upgrade:', error);
+        throw error;
+    }
+};
+
 module.exports = {
     clientsGetController,
     clientsGetByIdController,
@@ -281,5 +353,6 @@ module.exports = {
     clientsPatchController,
     clientsDeleteController,
     clientsGetCommandsController,
-    clientsGetCommentsController
+    clientsGetCommentsController,
+    clientsRequestSellerUpgradeController
 };
