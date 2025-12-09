@@ -1,3 +1,4 @@
+const e = require('cors');
 const { supabase } = require('../config/supabase');
 const dotenv = require('dotenv');
 
@@ -22,6 +23,8 @@ const registerUser = async (email, password, last_name, first_name, birthdate, s
             password
         });
 
+        console.log(authData, authError);
+
         if (authError) throw authError;
         if (!authData.user) throw new Error('Échec de création du compte');
 
@@ -30,10 +33,7 @@ const registerUser = async (email, password, last_name, first_name, birthdate, s
             email: email,
             last_name: last_name,
             first_name: first_name,
-            birthdate,
-            street: street,
-            postal_code: postal_code,
-            city: city,
+            birthdate: birthdate,
             phone: phone?.trim() || null,
             address: `${street}, ${postal_code}, ${city}`,
             role_id: role.id
@@ -52,6 +52,8 @@ const loginUser = async (email, password) => {
             email,
             password
         });
+
+        if (error) throw new Error('Échec de la connexion');
 
         const { data: user, error: errorUser } = await supabase
             .from('users')
