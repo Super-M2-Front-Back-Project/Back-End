@@ -7,8 +7,8 @@ const validate = require('../middlewares/verificators/validate');
 
 const router = express.Router();
 
-router.get('/get', validateGetCart, validate, asyncHandler(async (req, res) => {
-    const { user_id } = req.body;
+router.get('/get/:user_id', validateGetCart, validate, asyncHandler(async (req, res) => {
+    const { user_id } = req.params;
 
     if (!user_id) {
         return res.status(400).json({ error: 'un utilisateur est requis' });

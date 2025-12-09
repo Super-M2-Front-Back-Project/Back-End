@@ -53,7 +53,7 @@ const loginUser = async (email, password) => {
             password
         });
 
-        if (error) throw new Error('Échec de la connexion');
+        //if (error) throw new Error('Échec de la connexion');
 
         const { data: user, error: errorUser } = await supabase
             .from('users')

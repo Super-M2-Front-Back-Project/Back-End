@@ -62,6 +62,8 @@ const postCart = async (user_id, item_id) => {
 }
 
 const getCart = async (user_id) => {
+    console.log(user_id);
+    
     try {
         console.log('Récupération du cart pour l\'utilisateur:', user_id);
         const { data: cart } = await supabase

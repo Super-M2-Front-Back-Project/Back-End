@@ -1,7 +1,7 @@
 const { body, param } = require("express-validator");
 
 const validateGetCart = [
-    body("user_id")
+    param("user_id")
         .notEmpty()
         .withMessage("un utilisateur est requis")
         .isUUID()
