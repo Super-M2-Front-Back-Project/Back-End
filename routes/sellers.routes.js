@@ -489,4 +489,87 @@ router.delete('/:id', authenticate, authorize('ADMIN'), asyncHandler(async (req,
     res.status(200).json({ message: 'Profil vendeur supprimé avec succès' });
 }));
 
+// GET /api/sellers/admin/pending - Liste des vendeurs en attente de vérification (ADMIN)
+router.get('/admin/pending', authenticate, authorize('ADMIN'), asyncHandler(async (req, res) => {
+    const { page = 1, limit = 20 } = req.query;
+
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    const { data: sellers, error, count } = await supabase
+        .from('sellers')
+        .select(`
+            id,
+            name,
+            description,
+            siret,
+            is_verified,
+            created_at,
+            user:users(id, last_name, first_name, email)
+        `, { count: 'exact' })
+        .eq('is_verified', false)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + parseInt(limit) - 1);
+
+    if (error) throw error;
+
+    res.status(200).json({
+        pending_sellers: sellers || [],
+        pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: count || 0,
+            pages: Math.ceil((count || 0) / parseInt(limit))
+        }
+    });
+}));
+
+// PATCH /api/sellers/admin/:id/verify - Vérifier/Rejeter un vendeur (ADMIN)
+router.patch('/admin/:id/verify', authenticate, authorize('ADMIN'), asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { is_verified } = req.body;
+
+    if (is_verified === undefined || typeof is_verified !== 'boolean') {
+        return res.status(400).json({
+            error: 'is_verified requis (true pour approuver, false pour rejeter)'
+        });
+    }
+
+    const { data: seller } = await supabase
+        .from('sellers')
+        .select('id, name, is_verified')
+        .eq('id', id)
+        .single();
+
+    if (!seller) {
+        return res.status(404).json({ error: 'Vendeur non trouvé' });
+    }
+
+    if (seller.is_verified === is_verified) {
+        return res.status(400).json({
+            error: `Ce vendeur est déjà ${is_verified ? 'vérifié' : 'non vérifié'}`
+        });
+    }
+
+    const { data: updatedSeller, error } = await supabase
+        .from('sellers')
+        .update({ is_verified })
+        .eq('id', id)
+        .select(`
+            id,
+            name,
+            is_verified,
+            user:users(id, email, last_name, first_name)
+        `)
+        .single();
+
+    if (error) throw error;
+
+    res.status(200).json({
+        message: is_verified
+            ? 'Vendeur vérifié avec succès. Il peut maintenant créer des produits.'
+            : 'Vendeur rejeté. Il ne pourra pas créer de produits.',
+        seller: updatedSeller
+    });
+}));
+
 module.exports = router;
